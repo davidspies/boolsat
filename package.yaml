@@ -1,0 +1,64 @@
+name:                boolsat
+version:             0.1.0.0
+github:              "davidspies/boolsat"
+license:             BSD3
+author:              "David Spies"
+maintainer:          "dnspies@gmail.com"
+copyright:           "2018 David Spies"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+synopsis:            Boolean satisfiability solvers
+category:            Algorithms
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/davidspies/boolsat#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+- mtl
+
+library:
+  source-dirs: src
+
+ghc-options: -Wall -Werror
+
+default-extensions:
+  - DerivingStrategies
+  - FlexibleContexts
+  - GeneralizedNewtypeDeriving
+  - LambdaCase
+  - RecordWildCards
+  - ScopedTypeVariables
+
+executables:
+  boolsat-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - boolsat
+    - mtl
+
+tests:
+  boolsat-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - boolsat
+    - QuickCheck
+    - hspec
+    - reflection
