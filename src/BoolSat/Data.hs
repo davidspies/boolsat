@@ -13,8 +13,8 @@ newtype Variable = Variable Int
   deriving (Eq, Ord, Show)
 data Assignment = Assignment Variable Bool
   deriving (Eq, Ord, Show)
-newtype Solution = Solution (Map Variable Bool)
-  deriving (Eq, Ord)
+newtype Solution a = Solution (Map Variable (Bool, a))
+  deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 problemToCoerced :: Problem -> [Set (Int, Bool)]
 problemToCoerced (Problem ds) = map
@@ -25,22 +25,22 @@ coercedToProblem :: [Set (Int, Bool)] -> Problem
 coercedToProblem =
   Problem . map (Disjunction . Set.map (\(v, b) -> Assignment (Variable v) b))
 
-instance Show Solution where
+instance Show (Solution ()) where
   showsPrec d s =
     showParen (d > 10) $ showString "solInts " . showsPrec d (asInts s)
 
 class Solver s where
-  solve :: s -> Problem -> [Solution]
+  solve :: s -> Problem -> [Solution ()]
 
-satisfies :: Solution -> Problem -> Bool
+satisfies :: Solution a -> Problem -> Bool
 satisfies sol (Problem constraints) =
   all (sol `satisfiesConstraint`) constraints
 
-satisfiesConstraint :: Solution -> Disjunction -> Bool
+satisfiesConstraint :: Solution a -> Disjunction -> Bool
 satisfiesConstraint (Solution sol) (Disjunction assigns) = any matched assigns
  where
   matched :: Assignment -> Bool
-  matched (Assignment var val) = Map.lookup var sol == Just val
+  matched (Assignment var val) = (fst <$> Map.lookup var sol) == Just val
 
 allVars :: Problem -> Set Variable
 allVars (Problem djs) = Set.unions (map varsOf djs)
@@ -52,11 +52,14 @@ allVars (Problem djs) = Set.unions (map varsOf djs)
 possibilities :: Variable -> [Assignment]
 possibilities v = map (Assignment v) [False, True]
 
-makeSolution :: [Assignment] -> Solution
-makeSolution = Solution . Map.fromList . map assgnToPr
-  where assgnToPr (Assignment v a) = (v, a)
+makeSolution :: [Assignment] -> Solution ()
+makeSolution = makeSolution' . map (, ())
 
-solInts :: [Int] -> Solution
+makeSolution' :: [(Assignment, a)] -> Solution a
+makeSolution' = Solution . Map.fromList . map assgnToPr
+  where assgnToPr (Assignment v a, x) = (v, (a, x))
+
+solInts :: [Int] -> Solution ()
 solInts = makeSolution . map intAssign
 
 intAssign :: Int -> Assignment
@@ -64,6 +67,6 @@ intAssign n | n < 0     = Assignment (Variable (-n)) False
             | n > 0     = Assignment (Variable n) True
             | otherwise = error "intAssign 0"
 
-asInts :: Solution -> [Int]
+asInts :: Solution () -> [Int]
 asInts (Solution m) = map assignInt $ Map.toList m
-  where assignInt (Variable v, b) = if b then v else (-v)
+  where assignInt (Variable v, (b, ())) = if b then v else (-v)

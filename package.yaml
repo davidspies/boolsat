@@ -30,12 +30,18 @@ library:
 ghc-options: -Wall -Werror
 
 default-extensions:
+  - DeriveFunctor
+  - DeriveFoldable
+  - DeriveTraversable
   - DerivingStrategies
+  - ExistentialQuantification
   - FlexibleContexts
+  - FlexibleInstances
   - GeneralizedNewtypeDeriving
   - LambdaCase
   - RecordWildCards
   - ScopedTypeVariables
+  - TupleSections
 
 executables:
   boolsat-exe:

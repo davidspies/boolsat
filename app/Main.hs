@@ -7,7 +7,7 @@ import           Dimacs.Parse                   ( parse )
 main :: IO ()
 main = interact (showSolutions . solve Partial . parse)
 
-showSolutions :: [Solution] -> String
+showSolutions :: [Solution ()] -> String
 showSolutions = unlines . \case
   [] -> ["s UNSATISFIABLE"]
   sols@(_ : _) ->

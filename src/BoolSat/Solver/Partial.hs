@@ -12,6 +12,7 @@ import qualified Data.Set                      as Set
 import           BoolSat.Data
 
 data Partial = Partial
+  deriving (Show)
 
 instance Solver Partial where
   solve Partial prob =
@@ -24,14 +25,15 @@ instance Solver Partial where
       guard (makeSolution s' `mightSatisfy` prob)
       State.put s'
 
-mightSatisfy :: Solution -> Problem -> Bool
+mightSatisfy :: Solution a -> Problem -> Bool
 mightSatisfy sol (Problem constraints) =
   all (sol `mightSatisfyConstraint`) constraints
 
-mightSatisfyConstraint :: Solution -> Disjunction -> Bool
+mightSatisfyConstraint :: Solution a -> Disjunction -> Bool
 mightSatisfyConstraint (Solution sol) (Disjunction assigns) = any
   (not . disagrees)
   assigns
  where
   disagrees :: Assignment -> Bool
-  disagrees (Assignment var val) = Map.lookup var sol == Just (not val)
+  disagrees (Assignment var val) =
+    (fst <$> Map.lookup var sol) == Just (not val)

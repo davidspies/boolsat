@@ -1,16 +1,16 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-import           Control.Monad                  ( replicateM )
+import           Control.Monad
 import           Data.Proxy                     ( Proxy(Proxy) )
 import           Data.Reflection
 import qualified Data.Set                      as Set
 import           Test.Hspec
 import           Test.QuickCheck
-import           Data.List                      ( sort )
 
 import           BoolSat.Data
 import           BoolSat.Solver.Naive
-import           BoolSat.Solver.Partial
+import           BoolSat.Solver.Partial         ( Partial(Partial) )
+import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
 
 main :: IO ()
 main = hspec spec
@@ -54,8 +54,8 @@ prop_satisfies
   -> proxy gen
   -> ProblemFrom gen
   -> Property
-prop_satisfies solver = handlesProblem
-  (\prob -> conjoin $ map (`satisfies` prob) $ solver `solve` prob)
+prop_satisfies solver = handlesProblem $ \prob -> conjoin
+  [ sol `shouldSatisfy` (`satisfies` prob) | sol <- solver `solve` prob ]
 
 prop_agrees
   :: (Reifies gen ProblemGenerator, Solver solver1, Solver solver2)
@@ -64,8 +64,15 @@ prop_agrees
   -> proxy gen
   -> ProblemFrom gen
   -> Property
-prop_agrees solver1 solver2 = handlesProblem
-  (\prob -> sort (solver1 `solve` prob) === sort (solver2 `solve` prob))
+prop_agrees solver1 solver2 = handlesProblem $ \prob -> ioProperty $
+  (solver1 `solve` prob, solver2 `solve` prob) `shouldSatisfy` agreesOnNullity
+
+agreesOnNullity :: ([a], [a]) -> Bool
+agreesOnNullity = \case
+  ([]   , []   ) -> True
+  (_ : _, []   ) -> False
+  ([]   , _ : _) -> False
+  (_ : _, _ : _) -> True
 
 smallProblemGen :: ProblemGenerator
 smallProblemGen = ProblemGenerator
@@ -74,6 +81,11 @@ smallProblemGen = ProblemGenerator
   , genConstraintLength = pure 3
   }
 
+data SomeSolver = forall solver. (Show solver, Solver solver) => Some solver
+
+solvers :: [SomeSolver]
+solvers = [Some Partial, Some DPLL]
+
 spec :: Spec
 spec = do
   describe "Naive"
@@ -81,12 +93,12 @@ spec = do
     $ reify smallProblemGen
     $ property
     . prop_satisfies Naive
-  describe "Partial" $ do
+  forM_ solvers $ \(Some solver) -> describe (show solver) $ do
     it "should return solutions which satisfy all constraints"
       $ reify smallProblemGen
       $ property
-      . prop_satisfies Partial
+      . prop_satisfies solver
     it "should agree with Naive"
       $ reify smallProblemGen
       $ property
-      . prop_agrees Partial Naive
+      . prop_agrees solver Naive
