@@ -1,11 +1,11 @@
 module Main where
 
 import           BoolSat.Data
-import           BoolSat.Solver.Partial         ( Partial(Partial) )
+import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
 import           Dimacs.Parse                   ( parse )
 
 main :: IO ()
-main = interact (showSolutions . solve Partial . parse)
+main = interact (showSolutions . solve DPLL . parse)
 
 showSolutions :: [Solution ()] -> String
 showSolutions = unlines . \case

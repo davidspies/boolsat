@@ -6,42 +6,45 @@ import           Data.Reflection
 import qualified Data.Set                      as Set
 import           Test.Hspec
 import           Test.QuickCheck
+import           Control.Monad.Random           ( MonadRandom(..) )
 
 import           BoolSat.Data
-import           BoolSat.Solver.Naive
+import           BoolSat.Generate
+import           BoolSat.Solver.Naive           ( Naive(Naive) )
 import           BoolSat.Solver.Partial         ( Partial(Partial) )
 import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
 
 main :: IO ()
 main = hspec spec
 
-data ProblemGenerator = ProblemGenerator
-  { genNumVars :: Gen Int
-  , genNumConstraints :: Int -> Gen Int -- numVars -> numConstraints
-  , genConstraintLength :: Gen Int
-  }
-
 newtype ProblemFrom gen = ProblemFrom Problem
   deriving newtype Show
 
-instance Reifies gen ProblemGenerator => Arbitrary (ProblemFrom gen) where
-  arbitrary = do
-    let ProblemGenerator{..} = reflect (Proxy :: Proxy gen)
-    numVars <- genNumVars
-    numConstraints <- genNumConstraints numVars
-    fmap (ProblemFrom . Problem) $ replicateM numConstraints $ do
-      clen <- genConstraintLength
-      fmap (Disjunction . Set.fromList) $ replicateM clen $
-        Assignment <$> (Variable <$> choose (1, numVars)) <*> arbitrary
-  shrink (ProblemFrom (Problem ds)) = ProblemFrom . Problem <$>
-    shrinkList
-      (\(Disjunction s) ->
-        Disjunction . Set.fromList <$> shrinkList shrinkNothing (Set.toList s)
-      )
-      ds
+newtype RandGen a = RandGen {unRandGen :: Gen a}
+  deriving (Functor, Applicative, Monad)
+
+instance MonadRandom RandGen where
+  getRandomR = RandGen . choose
+  getRandom = undefined
+  getRandomRs = undefined
+  getRandoms = undefined
+
+instance Reifies gen (ProblemGenerator RandGen)
+  => Arbitrary (ProblemFrom gen) where
+  arbitrary =
+    unRandGen $ ProblemFrom <$> makeInstance (reflect (Proxy :: Proxy gen))
+  shrink (ProblemFrom (Problem ds)) =
+    ProblemFrom
+      .   Problem
+      <$> shrinkList
+            (\(Disjunction s) -> Disjunction . Set.fromList <$> shrinkList
+              shrinkNothing
+              (Set.toList s)
+            )
+            ds
 
 handlesProblem
-  :: Reifies gen ProblemGenerator
+  :: Reifies gen (ProblemGenerator RandGen)
   => (Problem -> Property)
   -> proxy gen
   -> ProblemFrom gen
@@ -49,7 +52,7 @@ handlesProblem
 handlesProblem f _ (ProblemFrom prob) = f prob
 
 prop_satisfies
-  :: (Reifies gen ProblemGenerator, Solver solver)
+  :: (Reifies gen (ProblemGenerator RandGen), Solver solver)
   => solver
   -> proxy gen
   -> ProblemFrom gen
@@ -58,14 +61,16 @@ prop_satisfies solver = handlesProblem $ \prob -> conjoin
   [ sol `shouldSatisfy` (`satisfies` prob) | sol <- solver `solve` prob ]
 
 prop_agrees
-  :: (Reifies gen ProblemGenerator, Solver solver1, Solver solver2)
+  :: (Reifies gen (ProblemGenerator RandGen), Solver solver1, Solver solver2)
   => solver1
   -> solver2
   -> proxy gen
   -> ProblemFrom gen
   -> Property
-prop_agrees solver1 solver2 = handlesProblem $ \prob -> ioProperty $
-  (solver1 `solve` prob, solver2 `solve` prob) `shouldSatisfy` agreesOnNullity
+prop_agrees solver1 solver2 = handlesProblem $ \prob ->
+  ioProperty
+    $               (solver1 `solve` prob, solver2 `solve` prob)
+    `shouldSatisfy` agreesOnNullity
 
 agreesOnNullity :: ([a], [a]) -> Bool
 agreesOnNullity = \case
@@ -74,7 +79,7 @@ agreesOnNullity = \case
   ([]   , _ : _) -> False
   (_ : _, _ : _) -> True
 
-smallProblemGen :: ProblemGenerator
+smallProblemGen :: Applicative m => ProblemGenerator m
 smallProblemGen = ProblemGenerator
   { genNumVars          = pure 10
   , genNumConstraints   = const $ pure 43

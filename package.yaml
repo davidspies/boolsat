@@ -21,6 +21,7 @@ description:         Please see the README on Github at <https://github.com/davi
 
 dependencies:
 - base >= 4.7 && < 5
+- MonadRandom
 - containers
 - mtl
 
@@ -53,7 +54,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - boolsat
-    - mtl
 
 tests:
   boolsat-test:
