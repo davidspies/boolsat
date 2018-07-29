@@ -17,38 +17,36 @@ import           BoolSat.Data
 data DPLL = DPLL
   deriving (Read, Show)
 
-type Level = Int
-
 instance Solver DPLL where
   solve DPLL = solution
 
-solution :: Problem -> [Solution ()]
-solution prob = map void $ go 1 =<< inference 0 emptySol
+solution :: Problem -> [Solution]
+solution prob = go =<< inference emptySol
  where
   vars :: Set Variable
   vars = allVars prob
-  inference :: Level -> Solution Level -> [Solution Level]
-  inference lvl = maybeToList . allInferenceSteps lvl prob
-  go :: Level -> Solution Level -> [Solution Level]
-  go level sol = case makeNextChoice vars sol of
+  inference :: Solution -> [Solution]
+  inference = maybeToList . allInferenceSteps prob
+  go :: Solution -> [Solution]
+  go sol = case makeNextChoice vars sol of
     Nothing -> do
       guard $ sol `satisfies` prob
       [sol]
     Just v -> do
-      a <- [ (Assignment v b, level) | b <- [False, True] ]
-      go (level + 1) =<< inference level (addAssignment a sol)
+      a <- [ Assignment v b | b <- [False, True] ]
+      go =<< inference (addAssignment a sol)
 
-addAssignment :: (Assignment, a) -> Solution a -> Solution a
-addAssignment (Assignment v b, x) (Solution sol) =
-  Solution $ Map.insert v (b, x) sol
+addAssignment :: Assignment -> Solution -> Solution
+addAssignment (Assignment v b) (Solution sol) =
+  Solution $ Map.insert v b sol
 
-makeNextChoice :: Set Variable -> Solution a -> Maybe Variable
+makeNextChoice :: Set Variable -> Solution -> Maybe Variable
 makeNextChoice vs (Solution sol) = find (`Map.notMember` sol) vs
 
-emptySol :: Solution a
-emptySol = makeSolution' []
+emptySol :: Solution
+emptySol = makeSolution []
 
-type Inference = Level -> Problem -> Solution Level -> Maybe (Solution Level)
+type Inference = Problem -> Solution -> Maybe Solution
 
 data UnitResult = NoLearn | Unsat | Assign Assignment
 
@@ -60,7 +58,7 @@ joinResults = \case
   (Assign a : xs) -> (a :) <$> joinResults xs
 
 unitPropogation, pureLiteralElimination, allInferenceSteps :: Inference
-unitPropogation level (Problem disjs) = go
+unitPropogation (Problem disjs) = go
  where
   go sol@(Solution solAssigns) = case newAssigns of
     Nothing         -> Nothing
@@ -69,27 +67,25 @@ unitPropogation level (Problem disjs) = go
    where
     inverted :: Assignment -> Bool
     inverted (Assignment v b) =
-      (fst <$> Map.lookup v solAssigns) == Just (not b)
-    newAssigns :: Maybe [(Assignment, Level)]
-    newAssigns =
-      fmap (map (, level)) $ joinResults $ (`map` disjs) $ \(Disjunction d) ->
-        case filter (not . inverted) (Set.toList d) of
-          []      -> Unsat
-          [a@(Assignment v _)] | v `Map.notMember` solAssigns -> Assign a
-          (_ : _) -> NoLearn
+      Map.lookup v solAssigns == Just (not b)
+    newAssigns :: Maybe [Assignment]
+    newAssigns = joinResults $ (`map` disjs) $ \(Disjunction d) ->
+      case filter (not . inverted) (Set.toList d) of
+        []      -> Unsat
+        [a@(Assignment v _)] | v `Map.notMember` solAssigns -> Assign a
+        (_ : _) -> NoLearn
 
-pureLiteralElimination level prob@(Problem disjs) sol =
+pureLiteralElimination prob@(Problem disjs) sol =
   Just $ foldl (flip addAssignment) sol $ mapMaybe pureValue
                                                    (Set.toList $ allVars prob)
  where
   occursWithSign :: Variable -> Bool -> Bool
   occursWithSign var val =
     any (\(Disjunction bs) -> Assignment var val `Set.member` bs) disjs
-  pureValue :: Variable -> Maybe (Assignment, Level)
+  pureValue :: Variable -> Maybe Assignment
   pureValue var
-    | not (occursWithSign var True)  = Just (Assignment var False, level)
-    | not (occursWithSign var False) = Just (Assignment var True, level)
+    | not (occursWithSign var True)  = Just (Assignment var False)
+    | not (occursWithSign var False) = Just (Assignment var True)
     | otherwise                      = Nothing
 
-allInferenceSteps level prob =
-  pureLiteralElimination level prob <=< unitPropogation level prob
+allInferenceSteps prob = pureLiteralElimination prob <=< unitPropogation prob

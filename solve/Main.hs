@@ -14,7 +14,7 @@ main = do
     _ : _ : _ -> error "Too many arguments"
   interact (showSolutions . solve solver . parse)
 
-showSolutions :: [Solution ()] -> String
+showSolutions :: [Solution] -> String
 showSolutions = unlines . \case
   [] -> ["s UNSATISFIABLE"]
   sols@(_ : _) ->
