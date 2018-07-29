@@ -60,12 +60,16 @@ makeSolution' = Solution . Map.fromList . map assgnToPr
   where assgnToPr (Assignment v a, x) = (v, (a, x))
 
 solInts :: [Int] -> Solution ()
-solInts = makeSolution . map intAssign
+solInts = makeSolution . map intToAssign
 
-intAssign :: Int -> Assignment
-intAssign n | n < 0     = Assignment (Variable (-n)) False
-            | n > 0     = Assignment (Variable n) True
-            | otherwise = error "intAssign 0"
+intToAssign :: Int -> Assignment
+intToAssign n | n < 0     = Assignment (Variable (-n)) False
+              | n > 0     = Assignment (Variable n) True
+              | otherwise = error "intToAssign 0"
+
+assignToInt :: Assignment -> Int
+assignToInt (Assignment (Variable n) b) | b         = n
+                                        | otherwise = -n
 
 asInts :: Solution () -> [Int]
 asInts (Solution m) = map assignInt $ Map.toList m

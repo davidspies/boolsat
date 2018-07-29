@@ -12,7 +12,7 @@ import qualified Data.Set                      as Set
 import           BoolSat.Data
 
 data Partial = Partial
-  deriving (Show)
+  deriving (Read, Show)
 
 instance Solver Partial where
   solve Partial prob =

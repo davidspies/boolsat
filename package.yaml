@@ -38,6 +38,7 @@ default-extensions:
   - ExistentialQuantification
   - FlexibleContexts
   - FlexibleInstances
+  - GADTs
   - GeneralizedNewtypeDeriving
   - LambdaCase
   - RecordWildCards
@@ -45,9 +46,19 @@ default-extensions:
   - TupleSections
 
 executables:
-  boolsat-exe:
+  solve:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         solve
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - boolsat
+
+  generate:
+    main:                Main.hs
+    source-dirs:         generate
     ghc-options:
     - -threaded
     - -rtsopts

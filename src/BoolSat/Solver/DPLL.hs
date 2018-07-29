@@ -15,7 +15,7 @@ import           Data.Foldable                  ( find )
 import           BoolSat.Data
 
 data DPLL = DPLL
-  deriving (Show)
+  deriving (Read, Show)
 
 type Level = Int
 

@@ -8,7 +8,7 @@ import qualified Data.Set                      as Set
 import           BoolSat.Data
 
 data Naive = Naive
-  deriving (Show)
+  deriving (Read, Show)
 
 instance Solver Naive where
   solve Naive prob =

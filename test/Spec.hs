@@ -13,6 +13,7 @@ import           BoolSat.Generate
 import           BoolSat.Solver.Naive           ( Naive(Naive) )
 import           BoolSat.Solver.Partial         ( Partial(Partial) )
 import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
+import           BoolSat.SomeSolver             ( SomeSolver(Some) )
 
 main :: IO ()
 main = hspec spec
@@ -85,8 +86,6 @@ smallProblemGen = ProblemGenerator
   , genNumConstraints   = const $ pure 43
   , genConstraintLength = pure 3
   }
-
-data SomeSolver = forall solver. (Show solver, Solver solver) => Some solver
 
 solvers :: [SomeSolver]
 solvers = [Some Partial, Some DPLL]
