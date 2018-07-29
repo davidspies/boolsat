@@ -1,12 +1,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-import           Control.Monad
+import           Control.Monad                  ( forM_ )
+import           Control.Monad.Random           ( MonadRandom(..) )
 import           Data.Proxy                     ( Proxy(Proxy) )
-import           Data.Reflection
+import           Data.Reflection                ( Reifies
+                                                , reify
+                                                , reflect
+                                                )
 import qualified Data.Set                      as Set
 import           Test.Hspec
 import           Test.QuickCheck
-import           Control.Monad.Random           ( MonadRandom(..) )
 
 import           BoolSat.Data
 import           BoolSat.Generate
