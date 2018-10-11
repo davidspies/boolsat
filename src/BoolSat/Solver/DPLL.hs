@@ -20,7 +20,7 @@ instance Solver DPLL where
 data Context = Context (Map Assignment [Disjunction]) Problem
 
 solution :: Problem -> [Solution]
-solution prob = go =<< inference emptySol
+solution prob = go =<< inference mempty
  where
   vars :: Set Variable
   vars = allVars prob
@@ -40,9 +40,6 @@ addAssignment (Assignment v b) (Solution sol) = Solution $ Map.insert v b sol
 makeNextChoice :: Set Variable -> Solution -> Maybe Variable
 makeNextChoice vs (Solution sol) = find (`Map.notMember` sol) vs
 
-emptySol :: Solution
-emptySol = makeSolution []
-
 contextOf :: Problem -> Context
 contextOf prob@(Problem disjs) = Context
   (ListMap.build $ do
@@ -51,8 +48,6 @@ contextOf prob@(Problem disjs) = Context
     return (a, d)
   )
   prob
-
-type Inference = Context -> Solution -> Maybe Solution
 
 data UnitResult = NoLearn | Unsat | Assign Assignment
 
@@ -64,13 +59,14 @@ joinResults = mapMaybeM $ \case
 
 addAllAssignments :: Solution -> [Assignment] -> Solution
 addAllAssignments (Solution current) newAssigns = Solution
-  $ Map.union current (Map.fromList [ (v, s) | Assignment v s <- newAssigns ])
+  $ Map.union (Map.fromList [ (v, s) | Assignment v s <- newAssigns ]) current
 
 unassignedVars :: Solution -> Problem -> [Variable]
 unassignedVars (Solution solAssigns) =
   filter (`Map.notMember` solAssigns) . Set.toList . allVars
 
-unitPropogation, pureLiteralElimination, allInferenceSteps :: Inference
+unitPropogation, pureLiteralElimination, allInferenceSteps
+  :: Context -> Solution -> Maybe Solution
 unitPropogation (Context vm (Problem disjs)) = go disjs
  where
   go ds sol@(Solution solAssigns) = newAssigns >>= \case

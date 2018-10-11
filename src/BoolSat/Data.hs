@@ -17,7 +17,7 @@ newtype Sign = Sign Bool
 data Assignment = Assignment Variable Sign
   deriving (Eq, Ord, Show)
 newtype Solution = Solution (Map Variable Sign)
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Semigroup, Monoid)
 
 sfalse, strue :: Sign
 sfalse = Sign False
