@@ -24,6 +24,7 @@ dependencies:
 - MonadRandom
 - containers
 - dlist
+- extra
 - mtl
 - random
 

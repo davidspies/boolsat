@@ -56,12 +56,11 @@ type Inference = Context -> Solution -> Maybe Solution
 
 data UnitResult = NoLearn | Unsat | Assign Assignment
 
-joinResults :: [UnitResult] -> Maybe [Assignment]
-joinResults = \case
-  []              -> Just []
-  (NoLearn  : xs) -> joinResults xs
-  (Unsat    : _ ) -> Nothing
-  (Assign a : xs) -> (a :) <$> joinResults xs
+joinResults :: MonadPlus m => [UnitResult] -> m [Assignment]
+joinResults = mapMaybeM $ \case
+  NoLearn  -> pure Nothing
+  Unsat    -> empty
+  Assign a -> pure $ Just a
 
 addAllAssignments :: Solution -> [Assignment] -> Solution
 addAllAssignments (Solution current) newAssigns = Solution
@@ -74,10 +73,9 @@ unassignedVars (Solution solAssigns) =
 unitPropogation, pureLiteralElimination, allInferenceSteps :: Inference
 unitPropogation (Context vm (Problem disjs)) = go disjs
  where
-  go ds sol@(Solution solAssigns) = case newAssigns of
-    Nothing         -> Nothing
-    Just []         -> Just sol
-    Just na@(_ : _) -> go
+  go ds sol@(Solution solAssigns) = newAssigns >>= \case
+    []         -> Just sol
+    na@(_ : _) -> go
       (do
         Assignment var val <- na
         vm ListMap.! Assignment var (opp val)
@@ -87,7 +85,7 @@ unitPropogation (Context vm (Problem disjs)) = go disjs
     inverted :: Assignment -> Bool
     inverted (Assignment v b) = Map.lookup v solAssigns == Just (opp b)
     newAssigns :: Maybe [Assignment]
-    newAssigns = joinResults $ (`map` ds) $ \(Disjunction d) ->
+    newAssigns = joinResults $ ds <&> \(Disjunction d) ->
       case filter (not . inverted) (Set.toList d) of
         []      -> Unsat
         [a@(Assignment v _)] | v `Map.notMember` solAssigns -> Assign a

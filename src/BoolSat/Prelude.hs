@@ -1,5 +1,6 @@
 module BoolSat.Prelude
-  ( module X
+  ( (<&>)
+  , module X
   )
 where
 
@@ -9,6 +10,9 @@ import           Prelude                       as X
                                                 , tail
                                                 )
 
+import           Control.Applicative           as X
+import           Control.Monad.Extra           as X
+                                                ( mapMaybeM )
 import           Control.Monad                 as X
 import           Data.Bifunctor                as X
                                                 ( first
@@ -27,3 +31,6 @@ import           Data.Proxy                    as X
                                                 ( Proxy(Proxy) )
 import           Data.Set                      as X
                                                 ( Set )
+
+(<&>) :: Functor f => f a -> (a -> b) -> f b
+(<&>) = flip fmap

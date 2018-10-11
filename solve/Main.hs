@@ -22,6 +22,3 @@ showSolutions = unlines . \case
   [] -> ["s UNSATISFIABLE"]
   sols@(_ : _) ->
     "s SATISFIABLE" : [ unwords ("v" : map show (asInts res)) | res <- sols ]
-
-(<&>) :: Functor f => f a -> (a -> b) -> f b
-(<&>) = flip fmap
