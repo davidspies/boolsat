@@ -50,12 +50,10 @@ emptySol = makeSolution []
 
 contextOf :: Problem -> Context
 contextOf prob@(Problem disjs) = Context
-  (Map.map DList.toList $ Map.fromListWith
-    (<>)
-    [ (a, DList.singleton d)
-    | d@(Disjunction assigns) <- disjs
-    , a                       <- Set.toList assigns
-    ]
+  (Map.map DList.toList $ Map.fromListWith (<>) $ do
+    d@(Disjunction assigns) <- disjs
+    a                       <- Set.toList assigns
+    return (a, DList.singleton d)
   )
   prob
 
@@ -77,11 +75,9 @@ unitPropogation (Context vm (Problem disjs)) = go disjs
     Nothing         -> Nothing
     Just []         -> Just sol
     Just na@(_ : _) -> go
-      (concatMap
-        (\(Assignment var val) ->
-          fromMaybe [] $ vm Map.!? Assignment var (opp val)
-        )
-        na
+      (do
+        Assignment var val <- na
+        fromMaybe [] $ vm Map.!? Assignment var (opp val)
       )
       (foldl (flip addAssignment) sol na)
    where
