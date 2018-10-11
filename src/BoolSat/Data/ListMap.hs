@@ -1,9 +1,8 @@
-module Data.ListMap where
+module BoolSat.Data.ListMap where
 
-import           Data.Bifunctor                 ( second )
-import           Data.Map                       ( Map )
+import           BoolSat.Prelude
+
 import qualified Data.Map                      as Map
-import           Data.Maybe                     ( fromMaybe )
 import qualified Data.DList                    as DList
 
 build :: Ord k => [(k, v)] -> Map k [v]

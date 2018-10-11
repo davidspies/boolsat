@@ -43,6 +43,7 @@ default-extensions:
   - GADTs
   - GeneralizedNewtypeDeriving
   - LambdaCase
+  - NoImplicitPrelude
   - RecordWildCards
   - ScopedTypeVariables
   - TupleSections

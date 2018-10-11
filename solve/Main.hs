@@ -1,9 +1,11 @@
 module Main where
 
+import           BoolSat.Prelude
+
 import           BoolSat.Data
+import           BoolSat.Dimacs.Parse           ( parse )
 import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
 import           BoolSat.SomeSolver             ( SomeSolver(Some) )
-import           Dimacs.Parse                   ( parse )
 import           System.Environment             ( getArgs )
 
 main :: IO ()

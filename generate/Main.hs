@@ -1,5 +1,7 @@
 module Main where
 
+import           BoolSat.Prelude
+
 import           System.Environment             ( getArgs )
 import qualified Data.Set                      as Set
 

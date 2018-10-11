@@ -3,6 +3,8 @@ module BoolSat.Solver.Naive
   )
 where
 
+import           BoolSat.Prelude
+
 import qualified Data.Set                      as Set
 
 import           BoolSat.Data

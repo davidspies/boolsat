@@ -3,7 +3,7 @@ module BoolSat.SomeSolver
   )
 where
 
-import           Data.Bifunctor                 ( first )
+import           BoolSat.Prelude
 
 import           BoolSat.Data                   ( Solver )
 import           BoolSat.Solver.Naive           ( Naive )

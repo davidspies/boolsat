@@ -3,16 +3,13 @@ module BoolSat.Solver.DPLL
   )
 where
 
-import           Control.Monad
-import           Data.Maybe
-import           Data.List                      ( find )
-import qualified Data.ListMap                  as ListMap
-import           Data.Set                       ( Set )
+import           BoolSat.Prelude
+
 import qualified Data.Set                      as Set
-import           Data.Map                       ( Map )
 import qualified Data.Map                      as Map
 
 import           BoolSat.Data
+import qualified BoolSat.Data.ListMap          as ListMap
 
 data DPLL = DPLL
   deriving (Read, Show)

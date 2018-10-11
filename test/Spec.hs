@@ -1,8 +1,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-import           Control.Monad                  ( forM_ )
+
+import           BoolSat.Prelude
+
 import           Control.Monad.Random           ( MonadRandom(..) )
-import           Data.Proxy                     ( Proxy(Proxy) )
 import           Data.Reflection                ( Reifies
                                                 , reify
                                                 , reflect

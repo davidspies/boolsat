@@ -4,6 +4,8 @@ module BoolSat.Generate
   )
 where
 
+import           BoolSat.Prelude
+
 import           BoolSat.Data
 import           Control.Monad                  ( replicateM )
 import           Control.Monad.Random           ( MonadRandom

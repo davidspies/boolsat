@@ -3,7 +3,8 @@ module BoolSat.Solver.Partial
   )
 where
 
-import           Control.Monad
+import           BoolSat.Prelude
+
 import           Control.Monad.State            ( execStateT )
 import qualified Control.Monad.State           as State
 import qualified Data.Map                      as Map
