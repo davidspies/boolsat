@@ -4,13 +4,13 @@ module BoolSat.Solver.DPLL
 where
 
 import           Control.Monad
-import qualified Data.DList                    as DList
 import           Data.Maybe
+import           Data.List                      ( find )
+import qualified Data.ListMap                  as ListMap
 import           Data.Set                       ( Set )
 import qualified Data.Set                      as Set
 import           Data.Map                       ( Map )
 import qualified Data.Map                      as Map
-import           Data.Foldable                  ( find )
 
 import           BoolSat.Data
 
@@ -32,10 +32,8 @@ solution prob = go =<< inference emptySol
   inference = maybeToList . allInferenceSteps ctx
   go :: Solution -> [Solution]
   go sol = case makeNextChoice vars sol of
-    Nothing -> do
-      guard $ sol `satisfies` prob
-      [sol]
-    Just v -> do
+    Nothing -> [ sol | sol `satisfies` prob ]
+    Just v  -> do
       a <- [ Assignment v b | b <- [sfalse, strue] ]
       go =<< inference (addAssignment a sol)
 
@@ -50,10 +48,10 @@ emptySol = makeSolution []
 
 contextOf :: Problem -> Context
 contextOf prob@(Problem disjs) = Context
-  (Map.map DList.toList $ Map.fromListWith (<>) $ do
+  (ListMap.build $ do
     d@(Disjunction assigns) <- disjs
     a                       <- Set.toList assigns
-    return (a, DList.singleton d)
+    return (a, d)
   )
   prob
 
@@ -68,6 +66,14 @@ joinResults = \case
   (Unsat    : _ ) -> Nothing
   (Assign a : xs) -> (a :) <$> joinResults xs
 
+addAllAssignments :: Solution -> [Assignment] -> Solution
+addAllAssignments (Solution current) newAssigns = Solution
+  $ Map.union current (Map.fromList [ (v, s) | Assignment v s <- newAssigns ])
+
+unassignedVars :: Solution -> Problem -> [Variable]
+unassignedVars (Solution solAssigns) =
+  filter (`Map.notMember` solAssigns) . Set.toList . allVars
+
 unitPropogation, pureLiteralElimination, allInferenceSteps :: Inference
 unitPropogation (Context vm (Problem disjs)) = go disjs
  where
@@ -77,9 +83,9 @@ unitPropogation (Context vm (Problem disjs)) = go disjs
     Just na@(_ : _) -> go
       (do
         Assignment var val <- na
-        fromMaybe [] $ vm Map.!? Assignment var (opp val)
+        vm ListMap.! Assignment var (opp val)
       )
-      (foldl (flip addAssignment) sol na)
+      (addAllAssignments sol na)
    where
     inverted :: Assignment -> Bool
     inverted (Assignment v b) = Map.lookup v solAssigns == Just (opp b)
@@ -90,18 +96,15 @@ unitPropogation (Context vm (Problem disjs)) = go disjs
         [a@(Assignment v _)] | v `Map.notMember` solAssigns -> Assign a
         (_ : _) -> NoLearn
 
-pureLiteralElimination (Context vm prob) sol@(Solution solAssigns) =
-  Just $ foldl (flip addAssignment) sol $ mapMaybe
-    pureValue
-    (filter (`Map.notMember` solAssigns) $ Set.toList $ allVars prob)
+pureLiteralElimination (Context vm prob) sol =
+  Just $ addAllAssignments sol $ mapMaybe pureValue (unassignedVars sol prob)
  where
   occursWithSign :: Variable -> Sign -> Bool
-  occursWithSign var val = any (not . satisfiesConstraint sol)
-                               (fromMaybe [] $ vm Map.!? Assignment var val)
+  occursWithSign var val =
+    any (not . satisfiesConstraint sol) (vm ListMap.! Assignment var val)
   pureValue :: Variable -> Maybe Assignment
-  pureValue var
-    | not (occursWithSign var strue)  = Just (Assignment var sfalse)
-    | not (occursWithSign var sfalse) = Just (Assignment var strue)
-    | otherwise                       = Nothing
+  pureValue var | not (occursWithSign var strue)  = Just (Assignment var sfalse)
+                | not (occursWithSign var sfalse) = Just (Assignment var strue)
+                | otherwise                       = Nothing
 
 allInferenceSteps prob = pureLiteralElimination prob <=< unitPropogation prob
