@@ -2,11 +2,12 @@ module Main where
 
 import           BoolSat.Prelude
 
+import           System.Environment             ( getArgs )
+
 import           BoolSat.Data
 import           BoolSat.Dimacs.Parse           ( parse )
 import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
 import           BoolSat.SomeSolver             ( SomeSolver(Some) )
-import           System.Environment             ( getArgs )
 
 main :: IO ()
 main = do

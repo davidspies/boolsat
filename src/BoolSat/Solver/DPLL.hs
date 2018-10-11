@@ -5,8 +5,8 @@ where
 
 import           BoolSat.Prelude
 
-import qualified Data.Set                      as Set
 import qualified Data.Map                      as Map
+import qualified Data.Set                      as Set
 
 import           BoolSat.Data
 import qualified BoolSat.Data.ListMap          as ListMap

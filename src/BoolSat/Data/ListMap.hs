@@ -2,8 +2,8 @@ module BoolSat.Data.ListMap where
 
 import           BoolSat.Prelude
 
-import qualified Data.Map                      as Map
 import qualified Data.DList                    as DList
+import qualified Data.Map                      as Map
 
 build :: Ord k => [(k, v)] -> Map k [v]
 build =

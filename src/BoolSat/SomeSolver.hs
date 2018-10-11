@@ -6,9 +6,9 @@ where
 import           BoolSat.Prelude
 
 import           BoolSat.Data                   ( Solver )
+import           BoolSat.Solver.DPLL            ( DPLL )
 import           BoolSat.Solver.Naive           ( Naive )
 import           BoolSat.Solver.Partial         ( Partial )
-import           BoolSat.Solver.DPLL            ( DPLL )
 
 data SomeSolver = forall solver. (Show solver, Solver solver)
   => Some solver

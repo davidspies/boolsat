@@ -14,9 +14,9 @@ import           Test.QuickCheck
 
 import           BoolSat.Data
 import           BoolSat.Generate
+import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
 import           BoolSat.Solver.Naive           ( Naive(Naive) )
 import           BoolSat.Solver.Partial         ( Partial(Partial) )
-import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
 import           BoolSat.SomeSolver             ( SomeSolver(Some) )
 
 main :: IO ()

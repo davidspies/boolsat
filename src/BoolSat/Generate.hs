@@ -6,12 +6,13 @@ where
 
 import           BoolSat.Prelude
 
-import           BoolSat.Data
 import           Control.Monad                  ( replicateM )
 import           Control.Monad.Random           ( MonadRandom
                                                 , getRandomR
                                                 )
 import qualified Data.Set                      as Set
+
+import           BoolSat.Data
 
 data ProblemGenerator m = ProblemGenerator
   { genNumVars :: m Int
