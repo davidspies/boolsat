@@ -35,4 +35,4 @@ mightSatisfyConstraint (Solution sol) (Disjunction assigns) = any
   assigns
  where
   disagrees :: Assignment -> Bool
-  disagrees (Assignment var val) = Map.lookup var sol == Just (not val)
+  disagrees (Assignment var val) = Map.lookup var sol == Just (opp val)

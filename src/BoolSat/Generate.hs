@@ -26,5 +26,5 @@ makeInstance ProblemGenerator {..} = do
     Disjunction . Set.fromList <$> replicateM
       clen
       (Assignment . Variable <$> getRandomR (1, numVars) <*> getRandomR
-        (False, True)
+        (sfalse, strue)
       )

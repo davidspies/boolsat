@@ -36,7 +36,7 @@ solution prob = go =<< inference emptySol
       guard $ sol `satisfies` prob
       [sol]
     Just v -> do
-      a <- [ Assignment v b | b <- [False, True] ]
+      a <- [ Assignment v b | b <- [sfalse, strue] ]
       go =<< inference (addAssignment a sol)
 
 addAssignment :: Assignment -> Solution -> Solution
@@ -79,14 +79,14 @@ unitPropogation (Context vm (Problem disjs)) = go disjs
     Just na@(_ : _) -> go
       (concatMap
         (\(Assignment var val) ->
-          fromMaybe [] $ vm Map.!? Assignment var (not val)
+          fromMaybe [] $ vm Map.!? Assignment var (opp val)
         )
         na
       )
       (foldl (flip addAssignment) sol na)
    where
     inverted :: Assignment -> Bool
-    inverted (Assignment v b) = Map.lookup v solAssigns == Just (not b)
+    inverted (Assignment v b) = Map.lookup v solAssigns == Just (opp b)
     newAssigns :: Maybe [Assignment]
     newAssigns = joinResults $ (`map` ds) $ \(Disjunction d) ->
       case filter (not . inverted) (Set.toList d) of
@@ -99,12 +99,13 @@ pureLiteralElimination (Context vm prob) sol@(Solution solAssigns) =
     pureValue
     (filter (`Map.notMember` solAssigns) $ Set.toList $ allVars prob)
  where
-  occursWithSign :: Variable -> Bool -> Bool
+  occursWithSign :: Variable -> Sign -> Bool
   occursWithSign var val = any (not . satisfiesConstraint sol)
                                (fromMaybe [] $ vm Map.!? Assignment var val)
   pureValue :: Variable -> Maybe Assignment
-  pureValue var | not (occursWithSign var True)  = Just (Assignment var False)
-                | not (occursWithSign var False) = Just (Assignment var True)
-                | otherwise                      = Nothing
+  pureValue var
+    | not (occursWithSign var strue)  = Just (Assignment var sfalse)
+    | not (occursWithSign var sfalse) = Just (Assignment var strue)
+    | otherwise                       = Nothing
 
 allInferenceSteps prob = pureLiteralElimination prob <=< unitPropogation prob
