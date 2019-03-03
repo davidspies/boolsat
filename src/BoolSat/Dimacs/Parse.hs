@@ -3,14 +3,9 @@ module BoolSat.Dimacs.Parse
   )
 where
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
-import           Control.Monad.State            ( State
-                                                , evalState
-                                                )
 import qualified Control.Monad.State           as State
-import           Data.List                      ( head )
-import           Data.Maybe                     ( fromJust )
 import qualified Data.Set                      as Set
 
 import           BoolSat.Data

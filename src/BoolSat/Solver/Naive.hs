@@ -3,7 +3,7 @@ module BoolSat.Solver.Naive
   )
 where
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
 import qualified Data.Set                      as Set
 
@@ -13,6 +13,6 @@ data Naive = Naive
   deriving (Read, Show)
 
 instance Solver Naive where
-  solve Naive prob =
-    filter (`satisfies` prob) $
-    makeSolution <$> mapM possibilities (Set.toList $ allVars prob)
+  solve Naive prob = filter (`satisfies` prob) $ makeSolution <$> mapM
+    possibilities
+    (Set.toList $ allVars prob)

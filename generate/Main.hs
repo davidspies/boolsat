@@ -1,6 +1,6 @@
 module Main where
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
 import qualified Data.Set                      as Set
 import           System.Environment             ( getArgs )
@@ -14,7 +14,7 @@ main = do
   let genNumVars          = pure $ read nvars
       genNumConstraints   = const $ pure $ read nclauses
       genConstraintLength = pure 3
-  putStrLn . exportProblem =<< makeInstance ProblemGenerator {..}
+  putStrLn . exportProblem =<< makeInstance ProblemGenerator { .. }
 
 exportProblem :: Problem -> String
 exportProblem (Problem disjs) =

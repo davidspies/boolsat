@@ -1,6 +1,6 @@
 module BoolSat.Data where
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set

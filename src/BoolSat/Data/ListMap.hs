@@ -1,6 +1,6 @@
 module BoolSat.Data.ListMap where
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
 import qualified Data.DList                    as DList
 import qualified Data.Map                      as Map

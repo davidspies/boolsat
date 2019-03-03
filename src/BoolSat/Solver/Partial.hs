@@ -3,9 +3,8 @@ module BoolSat.Solver.Partial
   )
 where
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
-import           Control.Monad.State            ( execStateT )
 import qualified Control.Monad.State           as State
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
@@ -17,14 +16,15 @@ data Partial = Partial
 
 instance Solver Partial where
   solve Partial prob =
-    filter (`satisfies` prob) $
-    map makeSolution $
-    (`execStateT` []) $
-    forM (Set.toList $ allVars prob) $ \x -> do
-      s <- State.get
-      s' <- (: s) <$> State.lift (possibilities x)
-      guard (makeSolution s' `mightSatisfy` prob)
-      State.put s'
+    filter (`satisfies` prob)
+      $ map makeSolution
+      $ (`execStateT` [])
+      $ forM (Set.toList $ allVars prob)
+      $ \x -> do
+          s  <- State.get
+          s' <- (: s) <$> State.lift (possibilities x)
+          guard (makeSolution s' `mightSatisfy` prob)
+          State.put s'
 
 mightSatisfy :: Solution -> Problem -> Bool
 mightSatisfy sol (Problem constraints) =

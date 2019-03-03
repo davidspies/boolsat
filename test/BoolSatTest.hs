@@ -3,7 +3,7 @@
 module BoolSatTest where
 
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
 import           Control.Monad.Random           ( MonadRandom(..) )
 import           Data.Reflection                ( Reifies

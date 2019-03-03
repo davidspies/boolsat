@@ -3,7 +3,7 @@ module BoolSat.SomeSolver
   )
 where
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
 import           BoolSat.Data                   ( Solver )
 import           BoolSat.Solver.DPLL            ( DPLL )

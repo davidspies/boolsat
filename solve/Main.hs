@@ -1,6 +1,6 @@
 module Main where
 
-import           BoolSat.Prelude
+import           DSpies.Prelude
 
 import           System.Environment             ( getArgs )
 
