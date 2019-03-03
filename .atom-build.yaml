@@ -1,0 +1,2 @@
+cmd: "stack test"
+errorMatch: "(?<file>[^:\\s]+):(?<line>\\d+):(?<col>\\d+):\\s+(?<message>.+)"

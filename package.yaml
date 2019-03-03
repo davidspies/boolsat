@@ -17,7 +17,7 @@ category:            Algorithms
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on Github at <https://github.com/davidspies/boolsat#readme>
+description:         Please see the README on GitHub at <https://github.com/davidspies/boolsat#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -27,27 +27,53 @@ dependencies:
 - extra
 - mtl
 - random
+- dspies-prelude
+
+ghc-options:
+- -Werror
+- -Wall
+
+default-extensions:
+- BangPatterns
+- ConstraintKinds
+- DataKinds
+- DeriveFoldable
+- DeriveFunctor
+- DeriveGeneric
+- DeriveLift
+- DeriveTraversable
+- DerivingStrategies
+- DerivingVia
+- EmptyCase
+- ExistentialQuantification
+- FlexibleContexts
+- FlexibleInstances
+- FunctionalDependencies
+- GADTs
+- GeneralizedNewtypeDeriving
+- InstanceSigs
+- KindSignatures
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- NoImplicitPrelude
+- OverloadedStrings
+- QuantifiedConstraints
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TupleSections
+- TypeApplications
+- TypeFamilyDependencies
+- TypeFamilies
+- TypeOperators
+- TypeSynonymInstances
+- ViewPatterns
 
 library:
   source-dirs: src
-
-ghc-options: -Wall -Werror
-
-default-extensions:
-  - DeriveFunctor
-  - DeriveFoldable
-  - DeriveTraversable
-  - DerivingStrategies
-  - ExistentialQuantification
-  - FlexibleContexts
-  - FlexibleInstances
-  - GADTs
-  - GeneralizedNewtypeDeriving
-  - LambdaCase
-  - NoImplicitPrelude
-  - RecordWildCards
-  - ScopedTypeVariables
-  - TupleSections
 
 executables:
   solve:
@@ -72,7 +98,7 @@ executables:
 
 tests:
   boolsat-test:
-    main:                Spec.hs
+    main:                Tasty.hs
     source-dirs:         test
     ghc-options:
     - -threaded
@@ -83,3 +109,6 @@ tests:
     - QuickCheck
     - hspec
     - reflection
+    - tasty
+    - tasty-discover
+    - tasty-hspec

@@ -1,5 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
+module BoolSatTest where
+
 
 import           BoolSat.Prelude
 
@@ -19,9 +21,6 @@ import           BoolSat.Solver.Naive           ( Naive(Naive) )
 import           BoolSat.Solver.Partial         ( Partial(Partial) )
 import           BoolSat.SomeSolver             ( SomeSolver(Some) )
 
-main :: IO ()
-main = hspec spec
-
 newtype ProblemFrom gen = ProblemFrom Problem
   deriving newtype Show
 
@@ -29,10 +28,10 @@ newtype RandGen a = RandGen {unRandGen :: Gen a}
   deriving (Functor, Applicative, Monad)
 
 instance MonadRandom RandGen where
-  getRandomR = RandGen . choose
-  getRandom = undefined
+  getRandomR  = RandGen . choose
+  getRandom   = undefined
   getRandomRs = undefined
-  getRandoms = undefined
+  getRandoms  = undefined
 
 instance Reifies gen (ProblemGenerator RandGen)
   => Arbitrary (ProblemFrom gen) where
@@ -56,23 +55,23 @@ handlesProblem
   -> Property
 handlesProblem f _ (ProblemFrom prob) = f prob
 
-prop_satisfies
+propSatisfies
   :: (Reifies gen (ProblemGenerator RandGen), Solver solver)
   => solver
   -> proxy gen
   -> ProblemFrom gen
   -> Property
-prop_satisfies solver = handlesProblem $ \prob -> conjoin
+propSatisfies solver = handlesProblem $ \prob -> conjoin
   [ sol `shouldSatisfy` (`satisfies` prob) | sol <- solver `solve` prob ]
 
-prop_agrees
+propAgrees
   :: (Reifies gen (ProblemGenerator RandGen), Solver solver1, Solver solver2)
   => solver1
   -> solver2
   -> proxy gen
   -> ProblemFrom gen
   -> Property
-prop_agrees solver1 solver2 = handlesProblem $ \prob ->
+propAgrees solver1 solver2 = handlesProblem $ \prob ->
   ioProperty
     $               (solver1 `solve` prob, solver2 `solve` prob)
     `shouldSatisfy` agreesOnNullity
@@ -85,28 +84,27 @@ agreesOnNullity = \case
   (_ : _, _ : _) -> True
 
 smallProblemGen :: Applicative m => ProblemGenerator m
-smallProblemGen = ProblemGenerator
-  { genNumVars          = pure 10
-  , genNumConstraints   = const $ pure 43
-  , genConstraintLength = pure 3
-  }
+smallProblemGen = ProblemGenerator { genNumVars          = pure 10
+                                   , genNumConstraints   = const $ pure 43
+                                   , genConstraintLength = pure 3
+                                   }
 
 solvers :: [SomeSolver]
 solvers = [Some Partial, Some DPLL]
 
-spec :: Spec
-spec = do
+spec_solve :: Spec
+spec_solve = do
   describe "Naive"
     $ it "should return solutions which satisfy all constraints"
     $ reify smallProblemGen
     $ property
-    . prop_satisfies Naive
+    . propSatisfies Naive
   forM_ solvers $ \(Some solver) -> describe (show solver) $ do
     it "should return solutions which satisfy all constraints"
       $ reify smallProblemGen
       $ property
-      . prop_satisfies solver
+      . propSatisfies solver
     it "should agree with Naive"
       $ reify smallProblemGen
       $ property
-      . prop_agrees solver Naive
+      . propAgrees solver Naive
