@@ -6,6 +6,7 @@ where
 import           DSpies.Prelude
 
 import           BoolSat.Data                   ( Solver )
+import           BoolSat.Solver.CDCL            ( CDCL )
 import           BoolSat.Solver.DPLL            ( DPLL )
 import           BoolSat.Solver.Naive           ( Naive )
 import           BoolSat.Solver.Partial         ( Partial )
@@ -21,3 +22,4 @@ instance Read SomeSolver where
     (first Some <$> (readsPrec d r :: [(Naive, String)]))
       ++ (first Some <$> (readsPrec d r :: [(Partial, String)]))
       ++ (first Some <$> (readsPrec d r :: [(DPLL, String)]))
+      ++ (first Some <$> (readsPrec d r :: [(CDCL, String)]))
