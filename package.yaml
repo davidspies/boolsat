@@ -26,6 +26,7 @@ dependencies:
 - containers
 - dlist
 - extra
+- monad-control
 - mtl
 - random
 

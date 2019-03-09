@@ -16,6 +16,7 @@ import           Test.QuickCheck
 
 import           BoolSat.Data
 import           BoolSat.Generate
+import           BoolSat.Solver.CDCL            ( CDCL(CDCL) )
 import           BoolSat.Solver.DPLL            ( DPLL(DPLL) )
 import           BoolSat.Solver.Naive           ( Naive(Naive) )
 import           BoolSat.Solver.Partial         ( Partial(Partial) )
@@ -90,7 +91,7 @@ smallProblemGen = ProblemGenerator { genNumVars          = pure 10
                                    }
 
 solvers :: [SomeSolver]
-solvers = [Some Partial, Some DPLL]
+solvers = [Some Partial, Some DPLL, Some CDCL]
 
 spec_solve :: Spec
 spec_solve = do
