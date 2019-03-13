@@ -26,6 +26,7 @@ import           BoolSat.Solver.CDCL.Yield      ( MonadYield )
 
 newtype Level = Level Int
   deriving (Eq, Ord)
+  deriving newtype Show
 
 class Levelable err where
   level :: err -> Level

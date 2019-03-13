@@ -33,6 +33,7 @@ data Conflict = Conflict
   { conflictCause :: Disjunction
   , conflictLevel :: Level
   }
+  deriving (Show)
 
 data AssignInfo = AssignInfo
   { value :: Sign
