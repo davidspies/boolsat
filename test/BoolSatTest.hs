@@ -54,7 +54,7 @@ handlesProblem
   -> proxy gen
   -> ProblemFrom gen
   -> Property
-handlesProblem f _ (ProblemFrom prob) = f prob
+handlesProblem f _ (ProblemFrom prob) = within 1000000 $ f prob
 
 propSatisfies
   :: (Reifies gen (ProblemGenerator RandGen), Solver solver)
