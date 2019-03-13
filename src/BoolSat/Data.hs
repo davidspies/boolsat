@@ -2,6 +2,7 @@ module BoolSat.Data where
 
 import           DSpies.Prelude
 
+import           Control.DeepSeq                ( NFData )
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 import           System.Random                  ( Random )
@@ -11,13 +12,14 @@ newtype Problem = Problem [Disjunction]
 newtype Disjunction = Disjunction (Set Assignment)
   deriving (Show)
 newtype Variable = Variable Int
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, NFData)
 newtype Sign = Sign Bool
-  deriving newtype (Eq, Ord, Show, Random)
+  deriving newtype (Eq, Ord, Show, Random, NFData)
 data Assignment = Assignment Variable Sign
   deriving (Eq, Ord, Show)
 newtype Solution = Solution (Map Variable Sign)
-  deriving (Eq, Ord, Semigroup, Monoid)
+  deriving (Eq, Ord, Semigroup, Monoid, Generic)
+instance NFData Solution
 
 sfalse, strue :: Sign
 sfalse = Sign False
