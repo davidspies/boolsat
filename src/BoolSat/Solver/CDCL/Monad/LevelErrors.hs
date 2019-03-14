@@ -21,9 +21,7 @@ import           Control.Monad.Reader           ( ReaderT(ReaderT) )
 import qualified Control.Monad.Reader          as Reader
 import           Control.Monad.Trans.Control    ( MonadTransControl )
 import qualified Control.Monad.Trans.Control   as TC
-
-import           BoolSat.Solver.CDCL.Monad.Yield
-                                                ( MonadYield )
+import           Control.Monad.Yield.Class      ( MonadYield )
 
 newtype Level = Level Int
   deriving (Eq, Ord)

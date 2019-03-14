@@ -12,13 +12,12 @@ where
 import           DSpies.Prelude
 
 import qualified Control.Monad.State           as State
+import           Control.Monad.Yield
 
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Assignment
                                                as X
 import           BoolSat.Solver.CDCL.Monad.LevelErrors
-                                               as X
-import           BoolSat.Solver.CDCL.Monad.Yield
                                                as X
 
 data RuleSet = RuleSet
@@ -36,7 +35,7 @@ newtype CDCLM a = CDCLM
     {unCDCL :: StateT AssignedLiterals
                   (LevelErrorsT Conflict
                     (StateT RuleSet
-                      (YieldM Solution)
+                      (Yield Solution)
                     )
                   )
                 a
@@ -82,7 +81,7 @@ instance Levelable Conflict where
 
 getSolutions :: Problem -> CDCLM a -> [Solution]
 getSolutions prob =
-  execYieldM
+  runYield
     . (`evalStateT` RuleSet prob [])
     . runLevelErrorsT
     . (`evalStateT` unassigned)

@@ -30,6 +30,7 @@ dependencies:
 - monad-control
 - mtl
 - random
+- yield
 
 ghc-options:
 - -Werror

@@ -6,6 +6,8 @@ where
 
 import           DSpies.Prelude
 
+import           Control.Monad.Yield
+
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Select
 import           BoolSat.Solver.CDCL.Monad
