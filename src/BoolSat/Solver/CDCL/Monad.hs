@@ -9,9 +9,9 @@ import           DSpies.Prelude
 
 import qualified Data.Map                      as Map
 
+import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Internal
                                                as X
-import           BoolSat.Data
 
 allRules :: MonadReadRules m => m [Disjunction]
 allRules = do
