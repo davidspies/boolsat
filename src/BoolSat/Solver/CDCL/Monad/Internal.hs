@@ -18,7 +18,8 @@ import           BoolSat.Solver.CDCL.Monad.Assignment
                                                as X
 import           BoolSat.Solver.CDCL.Monad.LevelErrors
                                                as X
-import           BoolSat.Solver.CDCL.Monad.Yield     as X
+import           BoolSat.Solver.CDCL.Monad.Yield
+                                               as X
 
 data RuleSet = RuleSet
   { original :: Problem
