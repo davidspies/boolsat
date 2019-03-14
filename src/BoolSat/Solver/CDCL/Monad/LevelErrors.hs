@@ -1,6 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module BoolSat.Solver.CDCL.LevelErrors
+module BoolSat.Solver.CDCL.Monad.LevelErrors
   ( LevelErrorsT
   , Level
   , Levelable(..)
@@ -22,7 +22,8 @@ import qualified Control.Monad.Reader          as Reader
 import           Control.Monad.Trans.Control    ( MonadTransControl )
 import qualified Control.Monad.Trans.Control   as TC
 
-import           BoolSat.Solver.CDCL.Yield      ( MonadYield )
+import           BoolSat.Solver.CDCL.Monad.Yield
+                                                ( MonadYield )
 
 newtype Level = Level Int
   deriving (Eq, Ord)

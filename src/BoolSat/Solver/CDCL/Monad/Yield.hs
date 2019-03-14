@@ -1,4 +1,4 @@
-module BoolSat.Solver.CDCL.Yield
+module BoolSat.Solver.CDCL.Monad.Yield
   ( MonadYield(..)
   , YieldM
   , execYieldM

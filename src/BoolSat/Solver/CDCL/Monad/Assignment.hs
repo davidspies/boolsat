@@ -1,4 +1,4 @@
-module BoolSat.Solver.CDCL.Assignment
+module BoolSat.Solver.CDCL.Monad.Assignment
   ( AssignInfo(..)
   , AssignedLiterals(..)
   , MonadReadAssignment(..)
@@ -13,7 +13,7 @@ import qualified Control.Monad.State           as State
 import qualified Data.Map                      as Map
 
 import           BoolSat.Data
-import           BoolSat.Solver.CDCL.LevelErrors
+import           BoolSat.Solver.CDCL.Monad.LevelErrors
                                                 ( Level )
 
 newtype AssignedLiterals = AssignedLiterals (Map Variable AssignInfo)
