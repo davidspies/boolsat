@@ -11,10 +11,12 @@ where
 
 import           DSpies.Prelude
 
+import qualified Control.Monad.Reader          as Reader
 import           Control.Monad.ST.Class         ( MonadST )
 import qualified Control.Monad.State           as State
 import           Control.Monad.Yield.Class      ( MonadYield )
 import           Control.Monad.Yield.ST
+import           Data.STRef
 
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Assignment
@@ -36,7 +38,7 @@ data Conflict = Conflict
 newtype CDCLM s a = CDCLM
     {unCDCL :: StateT AssignedLiterals
                   (LevelErrorsT Conflict
-                    (StateT RuleSet
+                    (ReaderT (STRef s RuleSet)
                       (YieldST s Solution)
                     )
                   )
@@ -59,8 +61,9 @@ class Monad m => MonadReadRules m where
 instance (MonadTrans t, MonadReadRules m, Monad (t m))
     => MonadReadRules (Transformed t m) where
   getRules = lift getRules
-instance {-# OVERLAPS #-} Monad m => MonadReadRules (StateT RuleSet m) where
-  getRules = State.get
+instance (Monad m, MonadST s m)
+    => MonadReadRules (ReaderT (STRef s RuleSet) m) where
+  getRules = liftST . readSTRef =<< Reader.ask
 deriving via (Transformed (StateT s) m) instance MonadReadRules m
     => MonadReadRules (StateT s m)
 deriving via (Transformed (LevelErrorsT err) m) instance MonadReadRules m
@@ -71,9 +74,13 @@ class MonadReadRules m => MonadWriteRules m where
 instance (MonadTrans t, MonadWriteRules m, Monad (t m))
     => MonadWriteRules (Transformed t m) where
   addRule = lift . addRule
-instance {-# OVERLAPS #-} Monad m => MonadWriteRules (StateT RuleSet m) where
-  addRule r =
-    State.modify (\RuleSet {..} -> RuleSet { learned = r : learned, .. })
+instance (Monad m, MonadST s m)
+    => MonadWriteRules (ReaderT (STRef s RuleSet) m) where
+  addRule r = do
+    ref <- Reader.ask
+    liftST $ modifySTRef
+      ref
+      (\RuleSet {..} -> RuleSet { learned = r : learned, .. })
 deriving via (Transformed (StateT s) m) instance MonadWriteRules m
     => MonadWriteRules (StateT s m)
 deriving via (Transformed (LevelErrorsT err) m) instance MonadWriteRules m
@@ -83,9 +90,6 @@ instance Levelable Conflict where
   level = conflictLevel
 
 getSolutions :: Problem -> (forall s . CDCLM s a) -> [Solution]
-getSolutions prob act =
-  runYieldST
-    $ (`evalStateT` RuleSet prob [])
-    $ runLevelErrorsT
-    $ (`evalStateT` unassigned)
-    $ unCDCL act
+getSolutions prob act = runYieldST $ do
+  ref <- liftST $ newSTRef $ RuleSet prob []
+  (`runReaderT` ref) $ runLevelErrorsT $ (`evalStateT` unassigned) $ unCDCL act
