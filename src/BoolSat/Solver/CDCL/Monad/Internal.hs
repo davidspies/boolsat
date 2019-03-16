@@ -11,8 +11,10 @@ where
 
 import           DSpies.Prelude
 
+import           Control.Monad.ST.Class         ( MonadST )
 import qualified Control.Monad.State           as State
-import           Control.Monad.Yield
+import           Control.Monad.Yield.Class      ( MonadYield )
+import           Control.Monad.Yield.ST
 
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Assignment
@@ -31,11 +33,11 @@ data Conflict = Conflict
   }
   deriving (Show)
 
-newtype CDCLM a = CDCLM
+newtype CDCLM s a = CDCLM
     {unCDCL :: StateT AssignedLiterals
                   (LevelErrorsT Conflict
                     (StateT RuleSet
-                      (Yield Solution)
+                      (YieldST s Solution)
                     )
                   )
                 a
@@ -49,6 +51,7 @@ newtype CDCLM a = CDCLM
            , MonadWriteAssignment
            , MonadReadRules
            , MonadWriteRules
+           , MonadST s
            )
 
 class Monad m => MonadReadRules m where
@@ -79,10 +82,10 @@ deriving via (Transformed (LevelErrorsT err) m) instance MonadWriteRules m
 instance Levelable Conflict where
   level = conflictLevel
 
-getSolutions :: Problem -> CDCLM a -> [Solution]
-getSolutions prob =
-  runYield
-    . (`evalStateT` RuleSet prob [])
-    . runLevelErrorsT
-    . (`evalStateT` unassigned)
-    . unCDCL
+getSolutions :: Problem -> (forall s . CDCLM s a) -> [Solution]
+getSolutions prob act =
+  runYieldST
+    $ (`evalStateT` RuleSet prob [])
+    $ runLevelErrorsT
+    $ (`evalStateT` unassigned)
+    $ unCDCL act
