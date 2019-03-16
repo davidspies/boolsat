@@ -7,6 +7,7 @@ where
 import           DSpies.Prelude
 
 import           BoolSat.Data
+import           BoolSat.Solver.CDCL.Select
 import           BoolSat.Solver.CDCL.Monad
 import           BoolSat.Solver.CDCL.PureLiteralElimination
                                                 ( pureLiteralElimination )
