@@ -9,9 +9,18 @@ import           DSpies.Prelude
 
 import           Control.Monad.Trans.Control
 
+import           Control.Monad.Yield.ST
+
 class Monad m => MonadMaskBase m where
   type Base m :: * -> *
   finally :: m a -> Base m () -> m a
+
+instance MonadMaskBase (YieldST s a) where
+  type Base (YieldST s a) = YieldST s a
+  finally act after = do
+    result <- act
+    after
+    return result
 
 instance (MonadTransControl t, MonadMaskBase m, Monad (t m))
     => MonadMaskBase (Transformed t m) where

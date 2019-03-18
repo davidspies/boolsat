@@ -22,6 +22,7 @@ import           Data.STRef
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Assignment
 import           BoolSat.Solver.CDCL.Monad.LevelErrors
+import           BoolSat.Solver.CDCL.Monad.Mask
 
 data RuleSet = RuleSet
   { original :: Problem
@@ -44,6 +45,7 @@ newtype CDCLM s a = CDCLM
                 a
       }
   deriving ( Functor, Applicative, Monad
+           , MonadMaskBase
            , MonadReadLevel
            , MonadThrowLevel Conflict
            , MonadHasLevels Conflict
