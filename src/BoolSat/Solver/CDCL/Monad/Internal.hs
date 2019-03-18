@@ -7,7 +7,6 @@ module BoolSat.Solver.CDCL.Monad.Internal
   , MonadWriteRules(..)
   , RuleSet(..)
   , getSolutions
-  , module X
   )
 where
 
@@ -22,9 +21,7 @@ import           Data.STRef
 
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Assignment
-                                               as X
 import           BoolSat.Solver.CDCL.Monad.LevelErrors
-                                               as X
 
 data RuleSet = RuleSet
   { original :: Problem

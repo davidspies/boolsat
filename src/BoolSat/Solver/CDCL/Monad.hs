@@ -10,7 +10,11 @@ import           DSpies.Prelude
 import qualified Data.Map                      as Map
 
 import           BoolSat.Data
+import           BoolSat.Solver.CDCL.Monad.Assignment
+                                               as X
 import           BoolSat.Solver.CDCL.Monad.Internal
+                                               as X
+import           BoolSat.Solver.CDCL.Monad.LevelErrors
                                                as X
 
 allRules :: MonadReadRules m => m [Disjunction]
