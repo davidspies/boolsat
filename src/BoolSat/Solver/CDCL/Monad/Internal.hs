@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module BoolSat.Solver.CDCL.Monad.Internal
   ( CDCLM
   , Conflict(..)
@@ -12,7 +14,7 @@ where
 import           DSpies.Prelude
 
 import qualified Control.Monad.Reader          as Reader
-import           Control.Monad.ST.Class         ( MonadST )
+import           Control.Monad.ST.Class
 import qualified Control.Monad.State           as State
 import           Control.Monad.Yield.Class      ( MonadYield )
 import           Control.Monad.Yield.ST
@@ -51,9 +53,7 @@ newtype CDCLM s a = CDCLM
            , MonadYield Solution
            , MonadReadAssignment
            , MonadWriteAssignment
-           , MonadReadRules
-           , MonadWriteRules
-           , MonadST s
+           , MonadST
            )
 
 class Monad m => MonadReadRules m where
@@ -61,9 +61,6 @@ class Monad m => MonadReadRules m where
 instance (MonadTrans t, MonadReadRules m, Monad (t m))
     => MonadReadRules (Transformed t m) where
   getRules = lift getRules
-instance (Monad m, MonadST s m)
-    => MonadReadRules (ReaderT (STRef s RuleSet) m) where
-  getRules = liftST . readSTRef =<< Reader.ask
 deriving via (Transformed (StateT s) m) instance MonadReadRules m
     => MonadReadRules (StateT s m)
 deriving via (Transformed (LevelErrorsT err) m) instance MonadReadRules m
@@ -74,17 +71,21 @@ class MonadReadRules m => MonadWriteRules m where
 instance (MonadTrans t, MonadWriteRules m, Monad (t m))
     => MonadWriteRules (Transformed t m) where
   addRule = lift . addRule
-instance (Monad m, MonadST s m)
-    => MonadWriteRules (ReaderT (STRef s RuleSet) m) where
-  addRule r = do
-    ref <- Reader.ask
-    liftST $ modifySTRef
-      ref
-      (\RuleSet {..} -> RuleSet { learned = r : learned, .. })
+
 deriving via (Transformed (StateT s) m) instance MonadWriteRules m
     => MonadWriteRules (StateT s m)
 deriving via (Transformed (LevelErrorsT err) m) instance MonadWriteRules m
     => MonadWriteRules (LevelErrorsT err m)
+
+instance MonadReadRules (CDCLM s) where
+  getRules = liftST . readSTRef =<< CDCLM Reader.ask
+
+instance MonadWriteRules (CDCLM s) where
+  addRule r = do
+    ref <- CDCLM Reader.ask
+    liftST $ modifySTRef
+      ref
+      (\RuleSet {..} -> RuleSet { learned = r : learned, .. })
 
 instance Levelable Conflict where
   level = conflictLevel

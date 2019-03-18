@@ -39,7 +39,7 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
 - git: https://github.com/davidspies/yield.git
-  commit: c72264cab6d437251760606af8776afa77a92b87
+  commit: 672fc0bbfe3d6d4b3a0d9ca8ed878ac2c5762bbf
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

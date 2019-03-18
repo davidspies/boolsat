@@ -24,6 +24,8 @@ import           Control.Monad.Trans.Control    ( MonadTransControl )
 import qualified Control.Monad.Trans.Control   as TC
 import           Control.Monad.Yield.Class      ( MonadYield )
 
+import           BoolSat.Solver.CDCL.Monad.Mask
+
 newtype Level = Level Int
   deriving (Eq, Ord)
   deriving newtype Show
@@ -66,8 +68,8 @@ class (Levelable err, MonadReadLevel m, MonadThrowLevel err m)
 instance (Monad m, MonadTransControl t, Monad (t m), MonadHasLevels err m)
     => MonadHasLevels err (Transformed t m) where
   localLevel op act = liftWithCarry $ \run -> localLevel op (run act)
-  catchError act onError =
-    liftWithCarry $ \run -> run act `catchError` (run . onError)
+  catchError act onErrorAct =
+    liftWithCarry $ \run -> run act `catchError` (run . onErrorAct)
 deriving via Transformed (StateT s) m instance MonadHasLevels err m
   => MonadHasLevels err (StateT s m)
 instance (Levelable err, Monad m)
@@ -84,7 +86,11 @@ onNextLevel act = localLevel incrLevel $ (Right <$> act) `catchError` \err ->
 newtype LevelErrorsT err m a
     = LevelErrorsT {unLevelErrorsT :: ExceptT err (ReaderT Level m) a}
   deriving ( Functor, Applicative, Monad, MonadState s
-           , MonadReadLevel, MonadThrowLevel err, MonadHasLevels err )
+           , MonadMaskBase
+           , MonadReadLevel
+           , MonadThrowLevel err
+           , MonadHasLevels err
+           )
 instance MonadTrans (LevelErrorsT err) where
   lift = LevelErrorsT . lift . lift
 instance MonadTransControl (LevelErrorsT err) where
@@ -95,8 +101,10 @@ instance MonadTransControl (LevelErrorsT err) where
   restoreT = LevelErrorsT . TC.restoreT . TC.restoreT
 deriving via Transformed (LevelErrorsT err) m instance MonadYield y m
   => MonadYield y (LevelErrorsT err m)
-deriving via Transformed (LevelErrorsT err) m instance MonadST s m
-  => MonadST s (LevelErrorsT err m)
+deriving via Transformed (LevelErrorsT err) m instance MonadST m
+  => MonadST (LevelErrorsT err m)
+deriving via Transformed (LevelErrorsT err) m instance MonadReader r m
+  => MonadReader r (LevelErrorsT err m)
 
 runLevelErrorsT :: Monad m => LevelErrorsT err m a -> m (Either err a)
 runLevelErrorsT = (`runReaderT` level0) . runExceptT . unLevelErrorsT
