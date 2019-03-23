@@ -39,8 +39,8 @@ pureLiteralElimination = do
   sequence_ $ Map.mapWithKey assignBy litState
  where
   pureAssign var value = do
-    AssignedLiterals m <- getAssignment
-    unless (var `Map.member` m) $ addAssignment
+    vs <- getAssignment
+    unless (isAssignedIn var vs) $ addAssignment
       var
       AssignInfo { value
                  , assignLevel = error "unused level"

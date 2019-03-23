@@ -33,12 +33,12 @@ instance Monoid Remaining where
 
 countRemainingTerms :: MonadReadAssignment m => Disjunction -> m Remaining
 countRemainingTerms (Disjunction lits) = do
-  AssignedLiterals m <- getAssignment
+  VarState m <- getAssignment
   return $ foldMap
-    (\a@(Assignment var val) -> case Map.lookup var m of
-      Nothing -> OneRemaining a
-      Just AssignInfo { value } | val == value -> Satisfied
-      Just _  -> NoneRemaining
+    (\a@(Assignment var val) -> case m Map.! var of
+      Unassigned _ -> OneRemaining a
+      Assigned AssignInfo { value } | val == value -> Satisfied
+      Assigned _   -> NoneRemaining
     )
     lits
 
@@ -61,7 +61,7 @@ tryUnitClause d = countRemainingTerms d >>= \case
 
 makeClause :: MonadReadAssignment m => Disjunction -> Level -> m Disjunction
 makeClause (Disjunction lits) lev = do
-  AssignedLiterals curState <- getAssignment
+  VarState curState <- getAssignment
   let
     go :: Assignment -> State (Set Assignment) (Set Assignment)
     go a@(Assignment var nval) = do
@@ -70,14 +70,14 @@ makeClause (Disjunction lits) lev = do
         then return Set.empty
         else do
           State.modify (Set.insert a)
-          case Map.lookup var curState of
-            Nothing -> return $ Set.singleton a
-            Just AssignInfo { value } | value == nval ->
+          case curState Map.! var of
+            Unassigned _ -> return $ Set.singleton a
+            Assigned AssignInfo { value } | value == nval ->
               error "go called on wrong sign"
-            Just AssignInfo { assignLevel } | assignLevel < lev ->
+            Assigned AssignInfo { assignLevel } | assignLevel < lev ->
               return $ Set.singleton a
-            Just AssignInfo { cause = Nothing } -> return $ Set.singleton a
-            Just AssignInfo { cause = Just (Disjunction lits'), value } ->
+            Assigned AssignInfo { cause = Nothing } -> return $ Set.singleton a
+            Assigned AssignInfo { cause = Just (Disjunction lits'), value } ->
               Set.unions <$> mapM
                 (\x@(Assignment var' val') -> if var' == var
                   then if val' == value
@@ -89,10 +89,9 @@ makeClause (Disjunction lits) lev = do
   return $ Disjunction $ Set.unions $ evalState (mapM go (Set.toList lits))
                                                 Set.empty
 maxLevel :: (HasCallStack, MonadReadAssignment m) => Disjunction -> m Level
-maxLevel (Disjunction lits) = getAssignment <&> \(AssignedLiterals m) ->
-  maximum $ map
-    (\(Assignment var v) ->
-      let AssignInfo {..} = m Map.! var
-      in  if v == value then error "Conflict signs match" else assignLevel
-    )
-    (Set.toList lits)
+maxLevel (Disjunction lits) = getAssignment <&> \(VarState m) -> maximum $ map
+  (\(Assignment var v) ->
+    let Assigned AssignInfo {..} = m Map.! var
+    in  if v == value then error "Conflict signs match" else assignLevel
+  )
+  (Set.toList lits)

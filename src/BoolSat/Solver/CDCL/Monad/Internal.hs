@@ -36,7 +36,7 @@ data Conflict = Conflict
   deriving (Show)
 
 newtype CDCLM s a = CDCLM
-    {unCDCL :: StateT AssignedLiterals
+    {unCDCL :: StateT VarState
                   (LevelErrorsT Conflict
                     (ReaderT (STRef s RuleSet)
                       (YieldST s Solution)
@@ -92,4 +92,5 @@ instance Levelable Conflict where
 getSolutions :: Problem -> (forall s . CDCLM s a) -> [Solution]
 getSolutions prob act = runYieldST $ do
   ref <- liftST $ newSTRef $ RuleSet prob []
-  (`runReaderT` ref) $ runLevelErrorsT $ (`evalStateT` unassigned) $ unCDCL act
+  (`runReaderT` ref) $ runLevelErrorsT $ (`evalStateT` unassigned prob) $ unCDCL
+    act

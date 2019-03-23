@@ -23,5 +23,9 @@ allRules = do
   return $ orig ++ learned
 
 currentSolution :: MonadReadAssignment m => m Solution
-currentSolution =
-  getAssignment <&> \(AssignedLiterals m) -> Solution $ Map.map value m
+currentSolution = getAssignment <&> \(VarState m) -> Solution $ Map.mapMaybe
+  (\case
+    Assigned   AssignInfo { value } -> Just value
+    Unassigned _                    -> Nothing
+  )
+  m

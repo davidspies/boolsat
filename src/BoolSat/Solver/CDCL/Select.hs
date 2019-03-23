@@ -16,14 +16,14 @@ class MonadSelect m where
 
 instance  MonadSelect (CDCLM s) where
   selectLiteral = do
-    AssignedLiterals m                  <- getAssignment
+    VarState m                          <- getAssignment
     RuleSet { original = Problem orig } <- getRules
     return $ head $ concatMap
       (\(Disjunction rs) ->
         mapMaybe
-            (\(Assignment var _) -> case Map.lookup var m of
-              Nothing -> Just (Assignment var sfalse)
-              Just _  -> Nothing
+            (\(Assignment var _) -> case m Map.! var of
+              Unassigned _ -> Just (Assignment var sfalse)
+              Assigned   _ -> Nothing
             )
           $ Set.toList rs
       )
