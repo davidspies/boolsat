@@ -1,6 +1,8 @@
 module BoolSat.Solver.CDCL.Monad.Retractable
   ( RetractRef
+  , RetractTracker
   , newRetractRef
+  , newTracker
   , readRetractRef
   , upLevel
   , writeRetractRef
@@ -24,6 +26,9 @@ newtype RetractTracker s = RetractTracker (STRef s (LengthList [SomeRef s]))
 data RetractRef s a = RetractRef (RetractTracker s) (STRef s [(Int, a)])
 
 data SomeRef s = forall a . SomeRef (RetractRef s a)
+
+newTracker :: ST s (RetractTracker s)
+newTracker = RetractTracker <$> newSTRef empty
 
 newRetractRef :: RetractTracker s -> a -> ST s (RetractRef s a)
 newRetractRef tracker x = RetractRef tracker <$> newSTRef [(0, x)]
