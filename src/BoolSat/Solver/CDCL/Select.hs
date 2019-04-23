@@ -14,7 +14,7 @@ import           BoolSat.Solver.CDCL.Monad
 class MonadSelect m where
   selectLiteral :: m Assignment
 
-instance  MonadSelect (CDCLM s) where
+instance  MonadSelect CDCLM where
   selectLiteral = do
     AssignedLiterals m                  <- getAssignment
     RuleSet { original = Problem orig } <- getRules

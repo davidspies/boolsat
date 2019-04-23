@@ -19,7 +19,6 @@ import           Control.Monad.Except           ( ExceptT(ExceptT) )
 import qualified Control.Monad.Except          as Except
 import           Control.Monad.Reader           ( ReaderT(ReaderT) )
 import qualified Control.Monad.Reader          as Reader
-import           Control.Monad.ST.Class         ( MonadST )
 import           Control.Monad.Trans.Control    ( MonadTransControl )
 import qualified Control.Monad.Trans.Control   as TC
 import           Control.Monad.Yield.Class      ( MonadYield )
@@ -95,8 +94,6 @@ instance MonadTransControl (LevelErrorsT err) where
   restoreT = LevelErrorsT . TC.restoreT . TC.restoreT
 deriving via Transformed (LevelErrorsT err) m instance MonadYield y m
   => MonadYield y (LevelErrorsT err m)
-deriving via Transformed (LevelErrorsT err) m instance MonadST s m
-  => MonadST s (LevelErrorsT err m)
 
 runLevelErrorsT :: Monad m => LevelErrorsT err m a -> m (Either err a)
 runLevelErrorsT = (`runReaderT` level0) . runExceptT . unLevelErrorsT
