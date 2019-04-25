@@ -6,19 +6,22 @@ where
 import           DSpies.Prelude          hiding ( throwError )
 
 import qualified Control.Monad.State           as State
-import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad
 
 unitPropagation
-  :: (MonadReadRules m, MonadWriteAssignment m, MonadThrowLevel Conflict m)
+  :: ( MonadReadLevel m
+     , MonadReadRules m
+     , MonadWriteAssignment m
+     , MonadThrowConflict m
+     )
   => m ()
 unitPropagation = do
-  rs      <- allRules
-  changed <- or <$> mapM tryUnitClause rs
-  when changed unitPropagation
+  rs      <- getAllClauses
+  changed <- mapM tryUnitClause rs
+  when (or changed) unitPropagation
 
 data Remaining
     = NoneRemaining | OneRemaining Assignment | ManyRemaining | Satisfied
@@ -32,25 +35,22 @@ instance Monoid Remaining where
   mempty = NoneRemaining
 
 countRemainingTerms :: MonadReadAssignment m => Disjunction -> m Remaining
-countRemainingTerms (Disjunction lits) = do
-  AssignedLiterals m <- getAssignment
-  return $ foldMap
-    (\a@(Assignment var val) -> case Map.lookup var m of
+countRemainingTerms (Disjunction lits) =
+  fmap fold . forM (Set.toList lits) $ \a@(Assignment var val) ->
+    lookupAssignment var <&> \case
       Nothing -> OneRemaining a
       Just AssignInfo { value } | val == value -> Satisfied
       Just _  -> NoneRemaining
-    )
-    lits
 
 tryUnitClause
-  :: (MonadWriteAssignment m, MonadThrowLevel Conflict m)
+  :: (MonadReadLevel m, MonadWriteAssignment m, MonadThrowConflict m)
   => Disjunction
   -> m Bool
 tryUnitClause d = countRemainingTerms d >>= \case
   NoneRemaining -> do
     lvl           <- maxLevel d
     newConstraint <- makeClause d lvl
-    throwError $ Conflict newConstraint lvl
+    throwConflict $ Conflict newConstraint lvl
   OneRemaining (Assignment var value) -> do
     assignLevel <- askLevel
     let cause = Just d
@@ -59,40 +59,40 @@ tryUnitClause d = countRemainingTerms d >>= \case
   ManyRemaining -> return False
   Satisfied     -> return False
 
-makeClause :: MonadReadAssignment m => Disjunction -> Level -> m Disjunction
-makeClause (Disjunction lits) lev = do
-  AssignedLiterals curState <- getAssignment
-  let
-    go :: Assignment -> State (Set Assignment) (Set Assignment)
-    go a@(Assignment var nval) = do
-      visited <- State.get
-      if a `Set.member` visited
-        then return Set.empty
-        else do
-          State.modify (Set.insert a)
-          case Map.lookup var curState of
-            Nothing -> return $ Set.singleton a
-            Just AssignInfo { value } | value == nval ->
-              error "go called on wrong sign"
-            Just AssignInfo { assignLevel } | assignLevel < lev ->
-              return $ Set.singleton a
-            Just AssignInfo { cause = Nothing } -> return $ Set.singleton a
-            Just AssignInfo { cause = Just (Disjunction lits'), value } ->
-              Set.unions <$> mapM
-                (\x@(Assignment var' val') -> if var' == var
-                  then if val' == value
-                    then return Set.empty
-                    else error "Disjunction implies opposite thing"
-                  else go x
-                )
-                (Set.toList lits')
-  return $ Disjunction $ Set.unions $ evalState (mapM go (Set.toList lits))
-                                                Set.empty
+makeClause
+  :: forall m . MonadReadAssignment m => Disjunction -> Level -> m Disjunction
+makeClause (Disjunction lits) lev =
+  Disjunction . Set.unions <$> evalStateT (mapM go (Set.toList lits)) Set.empty
+ where
+  go :: Assignment -> StateT (Set Assignment) m (Set Assignment)
+  go a@(Assignment var nval) = do
+    visited <- State.get
+    if a `Set.member` visited
+      then return Set.empty
+      else do
+        State.modify (Set.insert a)
+        lookupAssignment var >>= \case
+          Nothing -> return $ Set.singleton a
+          Just AssignInfo { value } | value == nval ->
+            error "go called on wrong sign"
+          Just AssignInfo { assignLevel } | assignLevel < lev ->
+            return $ Set.singleton a
+          Just AssignInfo { cause = Nothing } -> return $ Set.singleton a
+          Just AssignInfo { cause = Just (Disjunction lits'), value } ->
+            Set.unions <$> mapM
+              (\x@(Assignment var' val') -> if var' == var
+                then if val' == value
+                  then return Set.empty
+                  else error "Disjunction implies opposite thing"
+                else go x
+              )
+              (Set.toList lits')
+
 maxLevel :: (HasCallStack, MonadReadAssignment m) => Disjunction -> m Level
-maxLevel (Disjunction lits) = getAssignment <&> \(AssignedLiterals m) ->
-  maximum $ map
-    (\(Assignment var v) ->
-      let AssignInfo {..} = m Map.! var
-      in  if v == value then error "Conflict signs match" else assignLevel
-    )
-    (Set.toList lits)
+maxLevel (Disjunction lits) = mapM levelOf (Set.toList lits) <&> \case
+  []                -> level0
+  litLevels@(_ : _) -> maximum litLevels
+ where
+  levelOf (Assignment var v) = do
+    AssignInfo {..} <- getAssignment var
+    return $ if v == value then error "Conflict signs match" else assignLevel

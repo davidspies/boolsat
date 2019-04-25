@@ -10,13 +10,19 @@ import           System.Random                  ( Random )
 newtype Problem = Problem [Disjunction]
   deriving (Show)
 newtype Disjunction = Disjunction (Set Assignment)
-  deriving (Show)
+instance Show Disjunction where
+  show (Disjunction d) = show (Set.toList d)
 newtype Variable = Variable Int
-  deriving (Eq, Ord, Show, NFData)
+  deriving (Eq, Ord, NFData)
+  deriving newtype Show
 newtype Sign = Sign Bool
-  deriving newtype (Eq, Ord, Show, Random, NFData)
+  deriving newtype (Eq, Ord, Random, NFData)
+instance Show Sign where
+  show (Sign b) = if b then "strue" else "sfalse"
 data Assignment = Assignment Variable Sign
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
+instance Show Assignment where
+  show a = show $ assignToInt a
 newtype Solution = Solution (Map Variable Sign)
   deriving (Eq, Ord, Semigroup, Monoid, Generic)
 instance NFData Solution

@@ -11,6 +11,7 @@ import           Control.Monad.Yield.Class
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Select
 import           BoolSat.Solver.CDCL.Monad
+                                         hiding ( CDCL )
 import           BoolSat.Solver.CDCL.PureLiteralElimination
                                                 ( pureLiteralElimination )
 import           BoolSat.Solver.CDCL.UnitPropagation
@@ -27,9 +28,9 @@ solution prob = getSolutions prob search
 
 search
   :: forall m
-   . ( MonadWriteRules m
+   . ( MonadCatchConflict m
      , MonadWriteAssignment m
-     , MonadHasLevels Conflict m
+     , MonadWriteRules m
      , MonadSelect m
      , MonadYield Solution m
      )
@@ -37,19 +38,20 @@ search
 search = do
   unitPropagation
   pureLiteralElimination
-  let act0 = onNextLevel go >>= \case
-        Left conflict -> do
-          learnFrom conflict
-          act0
-        Right () -> return ()
-  act0
+  fix $ \act0 -> onNextLevel go >>= \case
+    Left conflict -> do
+      learnFrom conflict
+      act0
+    Right () -> return ()
  where
   go = allSatisfied >>= \case
     True  -> yield =<< currentSolution
     False -> do
       Assignment var sig <- selectLiteral
-      let tryAssign :: HasCallStack => Sign -> m (Either Conflict ())
-          tryAssign s = onNextLevel $ nextAssignment (Assignment var s) go
+      let tryAssign :: Sign -> m (Either Conflict ())
+          tryAssign s = onNextLevel $ do
+            nextAssignment (Assignment var s)
+            go
       tryAssign sig >>= \case
         Left conflict -> do
           learnFrom conflict
@@ -59,21 +61,16 @@ search = do
           Right ()       -> return ()
 
 nextAssignment
-  :: ( HasCallStack
-     , MonadWriteAssignment m
-     , MonadReadRules m
-     , MonadThrowLevel Conflict m
-     )
+  :: (MonadWriteAssignment m, MonadReadRules m, MonadThrowConflict m)
   => Assignment
-  -> m a
-  -> m a
-nextAssignment assig act = withAssignLiteral assig $ do
+  -> m ()
+nextAssignment assig = do
+  assignDecisionLiteral assig
   unitPropagation
   pureLiteralElimination
-  act
 
 learnFrom
-  :: (MonadWriteAssignment m, MonadThrowLevel Conflict m, MonadWriteRules m)
+  :: (MonadWriteAssignment m, MonadThrowConflict m, MonadWriteRules m)
   => Conflict
   -> m ()
 learnFrom (Conflict c _) = do
@@ -82,13 +79,10 @@ learnFrom (Conflict c _) = do
   pureLiteralElimination
 
 allSatisfied :: (MonadReadAssignment m, MonadReadRules m) => m Bool
-allSatisfied = satisfies <$> currentSolution <*> (original <$> getRules)
+allSatisfied = satisfies <$> currentSolution <*> (Problem <$> getBaseClauses)
 
-withAssignLiteral
-  :: (HasCallStack, MonadReadLevel m, MonadWriteAssignment m)
-  => Assignment
-  -> m a
-  -> m a
-withAssignLiteral (Assignment var value) act = do
+assignDecisionLiteral
+  :: (MonadReadLevel m, MonadWriteAssignment m) => Assignment -> m ()
+assignDecisionLiteral (Assignment var value) = do
   assignLevel <- askLevel
-  withAssignment var (AssignInfo { cause = Nothing, .. }) act
+  addAssignment var (AssignInfo { cause = Nothing, .. })

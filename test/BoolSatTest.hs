@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module BoolSatTest where
@@ -5,6 +6,7 @@ module BoolSatTest where
 
 import           DSpies.Prelude
 
+import           Control.DeepSeq                ( deepseq )
 import           Control.Monad.Random           ( MonadRandom(..) )
 import           Data.Reflection                ( Reifies
                                                 , reify
@@ -100,6 +102,9 @@ spec_solve = do
     $ reify smallProblemGen
     $ property
     . propSatisfies Naive
+  describe "CDCL" $ it
+    "should handle that one case"
+    ((CDCL `solve` uglyCase) `shouldSatisfy` (`deepseq` True))
   forM_ solvers $ \(Some solver) -> describe (show solver) $ do
     it "should return solutions which satisfy all constraints"
       $ reify smallProblemGen
@@ -109,3 +114,19 @@ spec_solve = do
       $ reify smallProblemGen
       $ property
       . propAgrees solver Naive
+
+disj :: [Int] -> Disjunction
+disj = Disjunction . Set.fromList . map intToAssign
+
+uglyCase :: Problem
+uglyCase = Problem
+  [ disj [5, -7]
+  , disj [-2, 10]
+  , disj [1, -3, -4]
+  , disj [3, 10]
+  , disj [-2, -10]
+  , disj [3, 5]
+  , disj [-1, -5]
+  , disj [-1, 2]
+  , disj [1, -3, 4]
+  ]

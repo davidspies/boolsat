@@ -1,48 +1,53 @@
 module BoolSat.Solver.CDCL.Monad.Assignment
-  ( AssignInfo(..)
-  , AssignedLiterals(..)
-  , MonadReadAssignment(..)
+  ( MonadReadAssignment(..)
   , MonadWriteAssignment(..)
-  , unassigned
   )
 where
 
 import           DSpies.Prelude
 
 import qualified Control.Monad.State           as State
-import qualified Data.Map                      as Map
+import qualified Data.Map.Lazy                 as Map
 
 import           BoolSat.Data
-import           BoolSat.Solver.CDCL.Monad.LevelErrors
-                                                ( Level )
-
-newtype AssignedLiterals = AssignedLiterals (Map Variable AssignInfo)
-
-data AssignInfo = AssignInfo
-  { value :: Sign
-  , assignLevel :: Level
-  , cause :: Maybe Disjunction
-  }
+import           BoolSat.Solver.CDCL.Monad.Internal
 
 class Monad m => MonadReadAssignment m where
-  getAssignment :: m AssignedLiterals
-instance Monad m => MonadReadAssignment (StateT AssignedLiterals m) where
-  getAssignment = State.get
+  getAssignment :: HasCallStack => Variable -> m AssignInfo
+  getAssignment = fmap fromJust . lookupAssignment
+  isAssigned :: Variable -> m Bool
+  isAssigned = fmap isJust . lookupAssignment
+  lookupAssignment :: Variable -> m (Maybe AssignInfo)
+  currentSolution :: m Solution
+
+instance (Monad (t m), MonadTrans t, MonadReadAssignment m)
+    => MonadReadAssignment (Transformed t m) where
+  getAssignment    = lift . getAssignment
+  isAssigned       = lift . isAssigned
+  lookupAssignment = lift . lookupAssignment
+  currentSolution  = lift currentSolution
+
+deriving via Transformed (StateT s) m instance MonadReadAssignment m
+    => MonadReadAssignment (StateT s m)
+
+instance MonadReadAssignment CDCL where
+  getAssignment k = CDCL $ State.gets $ (Map.! k) . assignments
+  isAssigned k = CDCL $ State.gets $ Map.member k . assignments
+  lookupAssignment k = CDCL $ State.gets $ Map.lookup k . assignments
+  currentSolution = CDCL $ State.gets $ Solution . Map.map value . assignments
 
 class MonadReadAssignment m => MonadWriteAssignment m where
-  addAssignment :: HasCallStack => Variable -> AssignInfo -> m ()
-  withAssignment :: Variable -> AssignInfo -> m a -> m a
-instance Monad m => MonadWriteAssignment (StateT AssignedLiterals m) where
-  addAssignment k v = State.modify
-    (\(AssignedLiterals m) ->
-      AssignedLiterals $ Map.insertWith (error "already present") k v m
-    )
-  withAssignment k v act = do
-    current <- State.get
-    addAssignment k v
-    result <- act
-    State.put current
-    return result
+  addAssignment :: Variable -> AssignInfo -> m ()
 
-unassigned :: AssignedLiterals
-unassigned = AssignedLiterals Map.empty
+instance MonadWriteAssignment CDCL where
+  addAssignment k v = CDCL $ State.modify $ \CDCLState {..} -> CDCLState
+    { assignments = insertNew k v assignments
+    , assignTimes = mapHead (k :) assignTimes
+    , ..
+    }
+
+insertNew :: (HasCallStack, Ord k) => k -> v -> Map k v -> Map k v
+insertNew k v = Map.alter (maybe (Just v) (error "Already present")) k
+
+mapHead :: (a -> a) -> NonEmpty a -> NonEmpty a
+mapHead fn (h :| t) = fn h :| t
