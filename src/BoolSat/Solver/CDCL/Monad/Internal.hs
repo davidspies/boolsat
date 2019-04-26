@@ -13,6 +13,7 @@ where
 
 import           DSpies.Prelude
 
+import           Control.Monad.ST
 import           Control.Monad.Yield.ST
 import           Control.Monad.Yield.Class      ( MonadYield )
 import qualified Data.Map                      as Map
@@ -20,7 +21,9 @@ import qualified Data.Map                      as Map
 import           BoolSat.Data
 
 newtype CDCL s a =
-    CDCL {unCDCL :: ExceptT Conflict (StateT CDCLState (YieldST s Solution)) a}
+    CDCL {
+      unCDCL :: ExceptT Conflict (StateT (CDCLState s) (YieldST s Solution)) a
+    }
   deriving (Functor, Applicative, Monad, MonadYield Solution)
 
 newtype Level = Level Int
@@ -34,7 +37,7 @@ incrLevel, decrLevel :: Level -> Level
 incrLevel (Level n) = Level (n + 1)
 decrLevel (Level n) = Level (n - 1)
 
-data CDCLState = CDCLState
+data CDCLState s = CDCLState
   { assignments :: Map Variable AssignInfo
   , baseClauses :: [Disjunction]
   , learntClauses :: [Disjunction]
@@ -52,13 +55,19 @@ data Conflict = Conflict {conflictRule :: Disjunction, conflictLevel :: Level}
   deriving (Show)
 
 getSolutions :: Problem -> (forall s . CDCL s ()) -> [Solution]
-getSolutions prob act =
-  runYieldST $ (`runStateT` initialState prob) $ runExceptT $ unCDCL act
+getSolutions prob act0 = runYieldST (go act0)
+ where
+  go :: forall s . CDCL s () -> YieldST s Solution ()
+  go act = do
+    i <- liftST $ initialState prob
+    _ <- (`runStateT` i) $ runExceptT $ unCDCL act
+    return ()
 
-initialState :: Problem -> CDCLState
-initialState (Problem baseClauses) = CDCLState { assignments   = Map.empty
-                                               , baseClauses
-                                               , learntClauses = []
-                                               , level         = level0
-                                               , assignTimes   = [] :| []
-                                               }
+initialState :: Problem -> ST s (CDCLState s)
+initialState (Problem baseClauses) = return $ CDCLState
+  { assignments   = Map.empty
+  , baseClauses
+  , learntClauses = []
+  , level         = level0
+  , assignTimes   = [] :| []
+  }
