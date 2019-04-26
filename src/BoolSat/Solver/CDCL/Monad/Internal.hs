@@ -13,14 +13,14 @@ where
 
 import           DSpies.Prelude
 
-import           Control.Monad.Yield
+import           Control.Monad.Yield.ST
 import           Control.Monad.Yield.Class      ( MonadYield )
 import qualified Data.Map                      as Map
 
 import           BoolSat.Data
 
-newtype CDCL a =
-    CDCL {unCDCL :: ExceptT Conflict (StateT CDCLState (Yield Solution)) a}
+newtype CDCL s a =
+    CDCL {unCDCL :: ExceptT Conflict (StateT CDCLState (YieldST s Solution)) a}
   deriving (Functor, Applicative, Monad, MonadYield Solution)
 
 newtype Level = Level Int
@@ -51,9 +51,9 @@ data AssignInfo = AssignInfo
 data Conflict = Conflict {conflictRule :: Disjunction, conflictLevel :: Level}
   deriving (Show)
 
-getSolutions :: Problem -> CDCL () -> [Solution]
-getSolutions prob =
-  runYield . (`runStateT` initialState prob) . runExceptT . unCDCL
+getSolutions :: Problem -> (forall s . CDCL s ()) -> [Solution]
+getSolutions prob act =
+  runYieldST $ (`runStateT` initialState prob) $ runExceptT $ unCDCL act
 
 initialState :: Problem -> CDCLState
 initialState (Problem baseClauses) = CDCLState { assignments   = Map.empty

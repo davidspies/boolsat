@@ -13,7 +13,7 @@ import           BoolSat.Solver.CDCL.Monad
 class MonadSelect m where
   selectLiteral :: m Assignment
 
-instance  MonadSelect CDCL where
+instance  MonadSelect (CDCL s) where
   selectLiteral = do
     orig <- getBaseClauses
     fromJust

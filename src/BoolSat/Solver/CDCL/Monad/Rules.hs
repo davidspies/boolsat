@@ -20,10 +20,10 @@ class Monad m => MonadReadRules m where
 class MonadReadRules m => MonadWriteRules m where
   addRule :: Disjunction -> m ()
 
-instance MonadReadRules CDCL where
+instance MonadReadRules (CDCL s) where
   getBaseClauses   = CDCL $ State.gets baseClauses
   getLearntClauses = CDCL $ State.gets learntClauses
 
-instance MonadWriteRules CDCL where
+instance MonadWriteRules (CDCL s) where
   addRule r = CDCL $ State.modify $ \CDCLState {..} ->
     CDCLState { learntClauses = r : learntClauses, .. }

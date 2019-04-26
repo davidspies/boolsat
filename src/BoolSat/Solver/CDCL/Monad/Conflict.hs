@@ -24,13 +24,13 @@ class MonadReadLevel m => MonadThrowConflict m where
 class MonadThrowConflict m => MonadCatchConflict m where
   onNextLevel :: m a -> m (Either Conflict a)
 
-instance MonadReadLevel CDCL where
+instance MonadReadLevel (CDCL s) where
   askLevel = CDCL $ State.gets level
 
-instance MonadThrowConflict CDCL where
+instance MonadThrowConflict (CDCL s) where
   throwConflict = CDCL . throwError
 
-instance MonadCatchConflict CDCL where
+instance MonadCatchConflict (CDCL s) where
   onNextLevel act = CDCL $ do
     State.modify $ \CDCLState {..} -> CDCLState
       { level       = incrLevel level

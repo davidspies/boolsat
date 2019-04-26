@@ -30,7 +30,7 @@ instance (Monad (t m), MonadTrans t, MonadReadAssignment m)
 deriving via Transformed (StateT s) m instance MonadReadAssignment m
     => MonadReadAssignment (StateT s m)
 
-instance MonadReadAssignment CDCL where
+instance MonadReadAssignment (CDCL s) where
   getAssignment k = CDCL $ State.gets $ (Map.! k) . assignments
   isAssigned k = CDCL $ State.gets $ Map.member k . assignments
   lookupAssignment k = CDCL $ State.gets $ Map.lookup k . assignments
@@ -39,7 +39,7 @@ instance MonadReadAssignment CDCL where
 class MonadReadAssignment m => MonadWriteAssignment m where
   addAssignment :: Variable -> AssignInfo -> m ()
 
-instance MonadWriteAssignment CDCL where
+instance MonadWriteAssignment (CDCL s) where
   addAssignment k v = CDCL $ State.modify $ \CDCLState {..} -> CDCLState
     { assignments = insertNew k v assignments
     , assignTimes = mapHead (k :) assignTimes
