@@ -59,7 +59,8 @@ incrLevel (Level n) = Level (n + 1)
 decrLevel (Level n) = Level (n - 1)
 
 data Environment s = Environment
-  { assignments :: Map Variable (STRef s (VarInfo s))
+  { originalProblem :: Problem
+  , assignments :: Map Variable (STRef s (VarInfo s))
   , baseClauses :: [STRef s (DisjunctInfo s)]
   }
 
@@ -95,20 +96,30 @@ getSolutions prob act0 = runYieldST (go act0)
       act
     return ()
 
+buildDisjunctionMap
+  :: (Variable -> b) -> Disjunction -> Maybe (Map Variable (Sign, b))
+buildDisjunctionMap fn (Disjunction d) =
+  sequence $ Map.fromListWith (const (const Nothing)) $ map
+    (\(Assignment k v) -> (k, Just (v, fn k)))
+    (Set.toList d)
+
 initialEnv :: Problem -> ST s (Environment s)
-initialEnv (Problem bc) = mfix $ \state -> do
-  baseClauses <- forM bc $ \(Disjunction d) ->
-    newSTRef $ DisjunctInfo $ Map.fromList $ map
-      (\(Assignment k v) -> (k, (v, assignments state Map.! k)))
-      (Set.toList d)
-  let useMap = Map.unionsWith (<>) $ zipWith
-        (\(Disjunction d) dr -> Map.fromList
-          $ map (\(Assignment k _) -> (k, DList.singleton dr)) (Set.toList d)
-        )
-        bc
-        baseClauses
+initialEnv prob@(Problem baseClauses) = mfix $ \state -> do
+  clauseRefs <- forM baseClauses $ \d -> traverse
+    newSTRef
+    (DisjunctInfo <$> buildDisjunctionMap (assignments state Map.!) d)
+  let useMap =
+        Map.unionsWith (<>)
+          $ flip map (zip baseClauses clauseRefs)
+          $ \(Disjunction d, dr) -> Map.fromList $ map
+              (\(Assignment k _) -> (k, maybe DList.empty DList.singleton dr))
+              (Set.toList d)
+
   assignments <- mapM (newSTRef . VarInfo Nothing . DList.toList) useMap
-  return $ Environment { assignments, baseClauses }
+  return $ Environment { originalProblem = prob
+                       , assignments
+                       , baseClauses     = catMaybes clauseRefs
+                       }
 
 initialState :: CDCLState s
 initialState =

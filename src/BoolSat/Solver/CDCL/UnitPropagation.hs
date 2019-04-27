@@ -25,7 +25,7 @@ unitPropagation = do
 
 data Remaining
     = NoneRemaining | OneRemaining Assignment | ManyRemaining | Satisfied
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 instance Semigroup Remaining where
   (<>) (OneRemaining _) (OneRemaining _) = ManyRemaining

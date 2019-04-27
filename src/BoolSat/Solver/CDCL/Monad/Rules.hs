@@ -17,6 +17,7 @@ import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Internal
 
 class Monad m => MonadReadRules m where
+  getProblem :: m Problem
   getBaseClauses :: m [Disjunction]
   getLearntClauses :: m [Disjunction]
   getAllClauses :: m [Disjunction]
@@ -26,6 +27,7 @@ class MonadReadRules m => MonadWriteRules m where
   addRule :: Disjunction -> m ()
 
 instance MonadReadRules (CDCL s) where
+  getProblem = Reader.asks originalProblem
   getBaseClauses =
     mapM (fmap makeDisjunction . liftST . readSTRef) =<< Reader.asks baseClauses
   getLearntClauses = mapM (fmap makeDisjunction . liftST . readSTRef)

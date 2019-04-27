@@ -22,6 +22,7 @@ class Monad m => MonadReadAssignment m where
   isAssigned = fmap isJust . lookupAssignment
   lookupAssignment :: Variable -> m (Maybe AssignInfo)
   currentSolution :: m Solution
+  remainingVars :: m [Variable]
 
 instance (Monad (t m), MonadTrans t, MonadReadAssignment m)
     => MonadReadAssignment (Transformed t m) where
@@ -29,6 +30,7 @@ instance (Monad (t m), MonadTrans t, MonadReadAssignment m)
   isAssigned       = lift . isAssigned
   lookupAssignment = lift . lookupAssignment
   currentSolution  = lift currentSolution
+  remainingVars    = lift remainingVars
 
 deriving via Transformed (StateT s) m instance MonadReadAssignment m
     => MonadReadAssignment (StateT s m)
@@ -41,6 +43,11 @@ instance MonadReadAssignment (CDCL s) where
     assigs <- Reader.asks assignments
     Solution
       <$> mapFilterM (liftST . fmap (fmap value . assigned) . readSTRef) assigs
+  remainingVars = do
+    assigs <- Reader.asks assignments
+    flip mapMaybeM (Map.toList assigs) $ \(k, v) ->
+      liftST $ readSTRef v <&> \vi ->
+        if isJust (assigned vi) then Nothing else Just k
 
 mapFilterM :: Applicative m => (v -> m (Maybe w)) -> Map k v -> m (Map k w)
 mapFilterM fn =

@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module BoolSat.Solver.CDCL.Select
   ( MonadSelect(..)
   )
@@ -5,24 +7,11 @@ where
 
 import           DSpies.Prelude
 
-import qualified Data.Set                      as Set
-
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad
 
 class MonadSelect m where
   selectLiteral :: m Assignment
 
-instance  MonadSelect (CDCL s) where
-  selectLiteral = do
-    orig <- getBaseClauses
-    fromJust
-      <$> firstJustM
-            (\(Disjunction rs) -> firstJustM
-              (\(Assignment k _) -> isAssigned k <&> \case
-                False -> Just $ Assignment k sfalse
-                True  -> Nothing
-              )
-              (Set.toList rs)
-            )
-            orig
+instance MonadReadAssignment m => MonadSelect m where
+  selectLiteral = (`Assignment` sfalse) . head <$> remainingVars

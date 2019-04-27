@@ -76,7 +76,7 @@ learnFrom (Conflict c _) = do
   pureLiteralElimination
 
 allSatisfied :: (MonadReadAssignment m, MonadReadRules m) => m Bool
-allSatisfied = satisfies <$> currentSolution <*> (Problem <$> getBaseClauses)
+allSatisfied = satisfies <$> currentSolution <*> getProblem
 
 assignDecisionLiteral
   :: (MonadReadLevel m, MonadWriteAssignment m) => Assignment -> m ()
