@@ -48,7 +48,9 @@ instance MonadCatchConflict (CDCL s) where
       , ..
       }
     forM_ h $ \k -> liftST $ modifySTRef (assigs Map.! k) $ \VarInfo {..} ->
-      VarInfo { assigned = Nothing, .. }
+      maybe (error "Already unassigned")
+            (const VarInfo { assigned = Nothing, .. })
+            assigned
     case result of
       Left c -> do
         l <- State.gets level
