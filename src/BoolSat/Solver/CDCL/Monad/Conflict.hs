@@ -34,25 +34,29 @@ instance MonadThrowConflict (CDCL s) where
 
 instance MonadCatchConflict (CDCL s) where
   onNextLevel act = do
-    State.modify $ \CDCLState {..} -> CDCLState
-      { level       = incrLevel level
-      , assignTimes = [] <| assignTimes
-      , ..
-      }
+    setup
     result <- CDCL $ lift $ runExceptT $ unCDCL act
-    h :| t <- State.gets assignTimes
-    assigs <- Reader.asks assignments
-    State.modify $ \CDCLState {..} -> CDCLState
-      { level       = decrLevel level
-      , assignTimes = NonEmpty.fromList t
-      , ..
-      }
-    forM_ h $ \k -> liftST $ modifySTRef (assigs Map.! k) $ \VarInfo {..} ->
-      maybe (error "Already unassigned")
-            (const VarInfo { assigned = Nothing, .. })
-            assigned
+    cleanup
     case result of
       Left c -> do
         l <- State.gets level
         if conflictLevel c > l then return result else throwError c
       Right _ -> return result
+
+setup :: CDCL s ()
+setup = State.modify $ \CDCLState {..} ->
+  CDCLState { level = incrLevel level, assignTimes = [] <| assignTimes, .. }
+
+cleanup :: CDCL s ()
+cleanup = do
+  h :| t <- State.gets assignTimes
+  assigs <- Reader.asks assignments
+  State.modify $ \CDCLState {..} -> CDCLState
+    { level       = decrLevel level
+    , assignTimes = NonEmpty.fromList t
+    , ..
+    }
+  liftST $ forM_ h $ \k -> modifySTRef (assigs Map.! k) $ \VarInfo {..} ->
+    case assigned of
+      Nothing -> error "Already unassigned"
+      Just _  -> VarInfo { assigned = Nothing, .. }

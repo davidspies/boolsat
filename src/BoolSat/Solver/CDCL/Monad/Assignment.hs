@@ -45,9 +45,9 @@ instance MonadReadAssignment (CDCL s) where
       <$> mapFilterM (liftST . fmap (fmap value . assigned) . readSTRef) assigs
   remainingVars = do
     assigs <- Reader.asks assignments
-    flip mapMaybeM (Map.toList assigs) $ \(k, v) ->
-      liftST $ readSTRef v <&> \vi ->
-        if isJust (assigned vi) then Nothing else Just k
+    flip mapMaybeM (Map.toList assigs) $ \(k, vr) ->
+      liftST $ readSTRef vr <&> \v ->
+        if isJust (assigned v) then Nothing else Just k
 
 mapFilterM :: Applicative m => (v -> m (Maybe w)) -> Map k v -> m (Map k w)
 mapFilterM fn =

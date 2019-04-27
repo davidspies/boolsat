@@ -110,11 +110,10 @@ initialEnv prob@(Problem baseClauses) = mfix $ \state -> do
     (DisjunctInfo <$> buildDisjunctionMap (assignments state Map.!) d)
   let useMap =
         Map.unionsWith (<>)
-          $ flip map (zip baseClauses clauseRefs)
-          $ \(Disjunction d, dr) -> Map.fromList $ map
-              (\(Assignment k _) -> (k, maybe DList.empty DList.singleton dr))
-              (Set.toList d)
-
+          $   zip baseClauses clauseRefs
+          <&> \(Disjunction d, dr) -> Map.fromList $ map
+                (\(Assignment k _) -> (k, maybe DList.empty DList.singleton dr))
+                (Set.toList d)
   assignments <- mapM (newSTRef . VarInfo Nothing . DList.toList) useMap
   return $ Environment { originalProblem = prob
                        , assignments
