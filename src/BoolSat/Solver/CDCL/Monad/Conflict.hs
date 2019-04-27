@@ -7,11 +7,13 @@ where
 
 import           DSpies.Prelude
 
+import qualified Control.Monad.Reader          as Reader
+import           Control.Monad.ST.Class
 import qualified Control.Monad.State           as State
 import           Data.List.NonEmpty             ( (<|) )
 import qualified Data.List.NonEmpty            as NonEmpty
 import qualified Data.Map                      as Map
-import qualified Data.Set                      as Set
+import           Data.STRef
 
 import           BoolSat.Solver.CDCL.Monad.Internal
 
@@ -25,27 +27,28 @@ class MonadThrowConflict m => MonadCatchConflict m where
   onNextLevel :: m a -> m (Either Conflict a)
 
 instance MonadReadLevel (CDCL s) where
-  askLevel = CDCL $ State.gets level
+  askLevel = State.gets level
 
 instance MonadThrowConflict (CDCL s) where
-  throwConflict = CDCL . throwError
+  throwConflict = throwError
 
 instance MonadCatchConflict (CDCL s) where
-  onNextLevel act = CDCL $ do
+  onNextLevel act = do
     State.modify $ \CDCLState {..} -> CDCLState
       { level       = incrLevel level
       , assignTimes = [] <| assignTimes
       , ..
       }
-    result <- lift $ runExceptT $ unCDCL act
-    State.modify $ \CDCLState {..} ->
-      let h :| t = assignTimes
-      in  CDCLState
-            { assignments = assignments `Map.withoutKeys` Set.fromList h
-            , level       = decrLevel level
-            , assignTimes = NonEmpty.fromList t
-            , ..
-            }
+    result <- CDCL $ lift $ runExceptT $ unCDCL act
+    h :| t <- State.gets assignTimes
+    assigs <- Reader.asks assignments
+    State.modify $ \CDCLState {..} -> CDCLState
+      { level       = decrLevel level
+      , assignTimes = NonEmpty.fromList t
+      , ..
+      }
+    forM_ h $ \k -> liftST $ modifySTRef (assigs Map.! k) $ \VarInfo {..} ->
+      VarInfo { assigned = Nothing, .. }
     case result of
       Left c -> do
         l <- State.gets level

@@ -6,8 +6,11 @@ where
 
 import           DSpies.Prelude
 
+import qualified Control.Monad.Reader          as Reader
+import           Control.Monad.ST.Class
 import qualified Control.Monad.State           as State
 import qualified Data.Map.Lazy                 as Map
+import           Data.STRef
 
 import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Internal
@@ -31,23 +34,31 @@ deriving via Transformed (StateT s) m instance MonadReadAssignment m
     => MonadReadAssignment (StateT s m)
 
 instance MonadReadAssignment (CDCL s) where
-  getAssignment k = CDCL $ State.gets $ (Map.! k) . assignments
-  isAssigned k = CDCL $ State.gets $ Map.member k . assignments
-  lookupAssignment k = CDCL $ State.gets $ Map.lookup k . assignments
-  currentSolution = CDCL $ State.gets $ Solution . Map.map value . assignments
+  lookupAssignment k = do
+    assigs <- Reader.asks assignments
+    assigned <$> liftST (readSTRef $ assigs Map.! k)
+  currentSolution = do
+    assigs <- Reader.asks assignments
+    Solution
+      <$> mapFilterM (liftST . fmap (fmap value . assigned) . readSTRef) assigs
+
+mapFilterM :: Applicative m => (v -> m (Maybe w)) -> Map k v -> m (Map k w)
+mapFilterM fn =
+  fmap (Map.fromDistinctAscList . catMaybes)
+    . traverse (\(k, v) -> fmap (k, ) <$> fn v)
+    . Map.toAscList
 
 class MonadReadAssignment m => MonadWriteAssignment m where
-  addAssignment :: Variable -> AssignInfo -> m ()
+  addAssignment :: HasCallStack => Variable -> AssignInfo -> m ()
 
 instance MonadWriteAssignment (CDCL s) where
-  addAssignment k v = CDCL $ State.modify $ \CDCLState {..} -> CDCLState
-    { assignments = insertNew k v assignments
-    , assignTimes = mapHead (k :) assignTimes
-    , ..
-    }
-
-insertNew :: (HasCallStack, Ord k) => k -> v -> Map k v -> Map k v
-insertNew k v = Map.alter (maybe (Just v) (error "Already present")) k
+  addAssignment k v = do
+    assigs <- Reader.asks assignments
+    liftST $ modifySTRef (assigs Map.! k) $ \VarInfo {..} -> case assigned of
+      Nothing -> VarInfo { assigned = Just v, .. }
+      Just _  -> error $ unwords ["variable", show k, "already set"]
+    State.modify $ \CDCLState {..} ->
+      CDCLState { assignTimes = mapHead (k :) assignTimes, .. }
 
 mapHead :: (a -> a) -> NonEmpty a -> NonEmpty a
 mapHead fn (h :| t) = fn h :| t
