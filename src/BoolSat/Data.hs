@@ -8,13 +8,15 @@ import qualified Data.Set                      as Set
 import           System.Random                  ( Random )
 
 newtype Problem = Problem [Disjunction]
-  deriving (Show)
+instance Show Problem where
+  showsPrec d xs =
+    showParen (d > 10) $ showString "problem " . showsPrec 11 (probToInts xs)
 newtype Disjunction = Disjunction (Set Assignment)
 instance Show Disjunction where
-  show (Disjunction d) = show (Set.toList d)
+  showsPrec d xs =
+    showParen (d > 10) $ showString "disj " . showsPrec 11 (disjToInts xs)
 newtype Variable = Variable Int
-  deriving (Eq, Ord, NFData)
-  deriving newtype Show
+  deriving (Eq, Ord, Show, NFData)
 newtype Sign = Sign Bool
   deriving newtype (Eq, Ord, Random, NFData)
 instance Show Sign where
@@ -22,7 +24,8 @@ instance Show Sign where
 data Assignment = Assignment Variable Sign
   deriving (Eq, Ord)
 instance Show Assignment where
-  show a = show $ assignToInt a
+  showsPrec d a =
+    showParen (d > 10) $ showString "assign " . showsPrec 11 (assignToInt a)
 newtype Solution = Solution (Map Variable Sign)
   deriving (Eq, Ord, Semigroup, Monoid, Generic)
 instance NFData Solution
@@ -45,7 +48,7 @@ coercedToProblem =
 
 instance Show Solution where
   showsPrec d s =
-    showParen (d > 10) $ showString "solInts " . showsPrec d (asInts s)
+    showParen (d > 10) $ showString "solution " . showsPrec d (solToInts s)
 
 class Solver s where
   solve :: s -> Problem -> [Solution]
@@ -74,18 +77,29 @@ makeSolution :: [Assignment] -> Solution
 makeSolution = Solution . Map.fromList . map assgnToPr
   where assgnToPr (Assignment v a) = (v, a)
 
-solInts :: [Int] -> Solution
-solInts = makeSolution . map intToAssign
+solution :: [Int] -> Solution
+solution = makeSolution . map assign
 
-intToAssign :: Int -> Assignment
-intToAssign n | n < 0     = Assignment (Variable (-n)) sfalse
-              | n > 0     = Assignment (Variable n) strue
-              | otherwise = error "intToAssign 0"
+assign :: Int -> Assignment
+assign n | n < 0     = Assignment (Variable (-n)) sfalse
+         | n > 0     = Assignment (Variable n) strue
+         | otherwise = error "assign 0"
 
 assignToInt :: Assignment -> Int
 assignToInt (Assignment (Variable n) (Sign b)) | b         = n
                                                | otherwise = -n
 
-asInts :: Solution -> [Int]
-asInts (Solution m) = map assignInt $ Map.toList m
-  where assignInt (Variable v, Sign b) = if b then v else (-v)
+solToInts :: Solution -> [Int]
+solToInts (Solution m) = map (assignToInt . uncurry Assignment) $ Map.toList m
+
+disj :: [Int] -> Disjunction
+disj = Disjunction . Set.fromList . map assign
+
+disjToInts :: Disjunction -> [Int]
+disjToInts (Disjunction xs) = map assignToInt $ Set.toList xs
+
+problem :: [[Int]] -> Problem
+problem = Problem . map disj
+
+probToInts :: Problem -> [[Int]]
+probToInts (Problem xs) = map disjToInts xs

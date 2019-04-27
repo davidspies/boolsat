@@ -53,7 +53,7 @@ readClause = Disjunction . Set.fromList <$> go
   go = tryConsumeTerm >>= \case
     Nothing -> return []
     Just 0  -> return []
-    Just i  -> (intToAssign i :) <$> go
+    Just i  -> (assign i :) <$> go
 
 problemReader :: State [String] Problem
 problemReader = do

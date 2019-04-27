@@ -115,18 +115,15 @@ spec_solve = do
       $ property
       . propAgrees solver Naive
 
-disj :: [Int] -> Disjunction
-disj = Disjunction . Set.fromList . map intToAssign
-
 uglyCase :: Problem
-uglyCase = Problem
-  [ disj [5, -7]
-  , disj [-2, 10]
-  , disj [1, -3, -4]
-  , disj [3, 10]
-  , disj [-2, -10]
-  , disj [3, 5]
-  , disj [-1, -5]
-  , disj [-1, 2]
-  , disj [1, -3, 4]
+uglyCase = problem
+  [ [5, -7]
+  , [-2, 10]
+  , [1, -3, -4]
+  , [3, 10]
+  , [-2, -10]
+  , [3, 5]
+  , [-1, -5]
+  , [-1, 2]
+  , [1, -3, 4]
   ]

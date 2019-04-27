@@ -14,25 +14,22 @@ import qualified BoolSat.Data.ListMap          as ListMap
 data DPLL = DPLL
   deriving (Read, Show)
 
-instance Solver DPLL where
-  solve DPLL = solution
-
 data Context = Context (Map Assignment [Disjunction]) Problem
 
-solution :: Problem -> [Solution]
-solution prob = go =<< inference mempty
- where
-  vars :: Set Variable
-  vars = allVars prob
-  ctx  = contextOf prob
-  inference :: Solution -> [Solution]
-  inference = maybeToList . allInferenceSteps ctx
-  go :: Solution -> [Solution]
-  go sol = case makeNextChoice vars sol of
-    Nothing -> [ sol | sol `satisfies` prob ]
-    Just v  -> do
-      a <- [ Assignment v b | b <- [sfalse, strue] ]
-      go =<< inference (addAssignment a sol)
+instance Solver DPLL where
+  solve DPLL prob = go =<< inference mempty
+   where
+    vars :: Set Variable
+    vars = allVars prob
+    ctx  = contextOf prob
+    inference :: Solution -> [Solution]
+    inference = maybeToList . allInferenceSteps ctx
+    go :: Solution -> [Solution]
+    go sol = case makeNextChoice vars sol of
+      Nothing -> [ sol | sol `satisfies` prob ]
+      Just v  -> do
+        a <- [ Assignment v b | b <- [sfalse, strue] ]
+        go =<< inference (addAssignment a sol)
 
 addAssignment :: Assignment -> Solution -> Solution
 addAssignment (Assignment v b) (Solution sol) = Solution $ Map.insert v b sol

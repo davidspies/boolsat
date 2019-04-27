@@ -21,10 +21,7 @@ data CDCL = CDCL
   deriving (Read, Show)
 
 instance Solver CDCL where
-  solve CDCL = solution
-
-solution :: Problem -> [Solution]
-solution prob = getSolutions prob search
+  solve CDCL prob = getSolutions prob search
 
 search
   :: forall m
