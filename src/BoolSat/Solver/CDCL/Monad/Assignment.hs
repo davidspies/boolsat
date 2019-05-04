@@ -61,11 +61,26 @@ class MonadReadAssignment m => MonadWriteAssignment m where
 instance MonadWriteAssignment (CDCL s) where
   addAssignment k v = do
     assigs <- Reader.asks assignments
-    liftST $ modifySTRef (assigs Map.! k) $ \VarInfo {..} -> case assigned of
-      Nothing -> VarInfo { assigned = Just v, .. }
-      Just _  -> error $ unwords ["variable", show k, "already set"]
-    State.modify $ \CDCLState {..} ->
-      CDCLState { assignTimes = mapHead (k :) assignTimes, .. }
+    liftST $ do
+      let vr = assigs Map.! k
+      vi@VarInfo { assigned, uses } <- readSTRef vr
+      case assigned of
+        Nothing -> do
+          writeSTRef vr vi { assigned = Just v }
+          forM_ uses $ \use -> modifySTRef use (assignAdjustCounts k (value v))
+        Just _ -> error $ unwords ["variable", show k, "already set"]
+    State.modify $ \state@CDCLState { assignTimes } ->
+      state { assignTimes = mapHead (k :) assignTimes }
 
 mapHead :: (a -> a) -> NonEmpty a -> NonEmpty a
 mapHead fn (h :| t) = fn h :| t
+
+assignAdjustCounts :: Variable -> Sign -> DisjunctInfo s -> DisjunctInfo s
+assignAdjustCounts k v DisjunctInfo { info, remaining, satisfying } =
+  DisjunctInfo
+    { info
+    , remaining  = remaining - 1
+    , satisfying = if v == fst (info Map.! k)
+                     then satisfying + 1
+                     else satisfying
+    }

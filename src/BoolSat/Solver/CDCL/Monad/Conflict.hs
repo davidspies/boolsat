@@ -15,6 +15,7 @@ import qualified Data.List.NonEmpty            as NonEmpty
 import qualified Data.Map                      as Map
 import           Data.STRef
 
+import           BoolSat.Data
 import           BoolSat.Solver.CDCL.Monad.Internal
 
 class Monad m => MonadReadLevel m where
@@ -44,19 +45,30 @@ instance MonadCatchConflict (CDCL s) where
       Right _ -> return result
 
 setup :: CDCL s ()
-setup = State.modify $ \CDCLState {..} ->
-  CDCLState { level = incrLevel level, assignTimes = [] <| assignTimes, .. }
+setup = State.modify $ \state@CDCLState { level, assignTimes } ->
+  state { level = incrLevel level, assignTimes = [] <| assignTimes }
 
 cleanup :: CDCL s ()
 cleanup = do
   h :| t <- State.gets assignTimes
   assigs <- Reader.asks assignments
-  State.modify $ \CDCLState {..} -> CDCLState
-    { level       = decrLevel level
-    , assignTimes = NonEmpty.fromList t
-    , ..
-    }
-  liftST $ forM_ h $ \k -> modifySTRef (assigs Map.! k) $ \VarInfo {..} ->
+  State.modify $ \state@CDCLState { level } ->
+    state { level = decrLevel level, assignTimes = NonEmpty.fromList t }
+  liftST $ forM_ h $ \k -> do
+    let vr = assigs Map.! k
+    vi@VarInfo { assigned, uses } <- readSTRef vr
     case assigned of
-      Nothing -> error "Already unassigned"
-      Just _  -> VarInfo { assigned = Nothing, .. }
+      Nothing                   -> error "Already unassigned"
+      Just AssignInfo { value } -> do
+        writeSTRef vr $ vi { assigned = Nothing }
+        forM_ uses $ \use -> modifySTRef use (unassignAdjustCounts k value)
+
+unassignAdjustCounts :: Variable -> Sign -> DisjunctInfo s -> DisjunctInfo s
+unassignAdjustCounts k v DisjunctInfo { info, remaining, satisfying } =
+  DisjunctInfo
+    { info
+    , remaining  = remaining + 1
+    , satisfying = if v == fst (info Map.! k)
+                     then satisfying - 1
+                     else satisfying
+    }
