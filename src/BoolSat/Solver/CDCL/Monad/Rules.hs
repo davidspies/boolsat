@@ -63,10 +63,10 @@ instance MonadWriteRules (CDCL s) where
       let
         info =
           Map.fromList $ map (\(Assignment k v) -> (k, (v, assigs Map.! k))) as
-      UseCount {..}  <- getUseCount info
-      newDisjunctRef <- newSTRef DisjunctInfo { .. }
+      UseCount { satisfying, remaining } <- getUseCount info
+      newDisjunctRef <- newSTRef DisjunctInfo { info, satisfying, remaining }
       forM_ info $ \(_, v) -> modifySTRef v
-        $ \VarInfo {..} -> VarInfo { uses = newDisjunctRef : uses, .. }
+        $ \vi@VarInfo { uses } -> vi { uses = newDisjunctRef : uses }
       return newDisjunctRef
-    State.modify $ \CDCLState {..} ->
-      CDCLState { learntClauses = newDisjunctRef : learntClauses, .. }
+    State.modify $ \state@CDCLState { learntClauses } ->
+      state { learntClauses = newDisjunctRef : learntClauses }

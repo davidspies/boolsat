@@ -82,4 +82,4 @@ assignDecisionLiteral
   :: (MonadReadLevel m, MonadWriteAssignment m) => Assignment -> m ()
 assignDecisionLiteral (Assignment var value) = do
   assignLevel <- askLevel
-  addAssignment var (AssignInfo { cause = Nothing, .. })
+  addAssignment var (AssignInfo { assignLevel, cause = Nothing, value })

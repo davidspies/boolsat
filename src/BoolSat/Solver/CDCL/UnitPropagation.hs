@@ -54,7 +54,7 @@ tryUnitClause d = countRemainingTerms d >>= \case
   OneRemaining (Assignment var value) -> do
     assignLevel <- askLevel
     let cause = Just d
-    addAssignment var AssignInfo { .. }
+    addAssignment var AssignInfo{assignLevel, cause, value}
     return True
   ManyRemaining -> return False
   Satisfied     -> return False
@@ -94,5 +94,5 @@ maxLevel (Disjunction lits) = mapM levelOf (Set.toList lits) <&> \case
   litLevels@(_ : _) -> maximum litLevels
  where
   levelOf (Assignment var v) = do
-    AssignInfo {..} <- getAssignment var
+    AssignInfo {assignLevel, value} <- getAssignment var
     return $ if v == value then error "Conflict signs match" else assignLevel
