@@ -8,6 +8,7 @@ import           DSpies.Prelude
 
 import qualified Data.Map                      as Map
 import qualified Control.Monad.Reader          as Reader
+import           Control.Monad.ST               ( ST )
 import           Control.Monad.ST.Class         ( liftST )
 import qualified Control.Monad.State           as State
 import           Data.STRef
@@ -34,14 +35,38 @@ instance MonadReadRules (CDCL s) where
     =<< State.gets learntClauses
 
 makeDisjunction :: DisjunctInfo s -> Disjunction
-makeDisjunction (DisjunctInfo m) = Disjunction
-  $ Set.fromList (map (\(k, (v, _)) -> Assignment k v) (Map.toList m))
+makeDisjunction DisjunctInfo { info } = Disjunction
+  $ Set.fromList (map (\(k, (v, _)) -> Assignment k v) (Map.toList info))
+
+data UseCount = UseCount{satisfying :: Int, remaining :: Int}
+
+instance Semigroup UseCount where
+  (<>) (UseCount ls lr) (UseCount rs rr) = UseCount (ls + rs) (lr + rr)
+
+instance Monoid UseCount where
+  mempty = UseCount 0 0
+
+getUseCount :: DisjunctionMap s -> ST s UseCount
+getUseCount = fmap fold . traverse checkVar . Map.elems
+
+checkVar :: (Sign, STRef s (VarInfo s)) -> ST s UseCount
+checkVar (v, ref) = readSTRef ref <&> \VarInfo { assigned } -> case assigned of
+  Nothing -> UseCount { satisfying = 0, remaining = 1 }
+  Just AssignInfo { value } | v == value ->
+    UseCount { satisfying = 1, remaining = 0 }
+  Just AssignInfo{} -> UseCount { satisfying = 0, remaining = 0 }
 
 instance MonadWriteRules (CDCL s) where
   addRule (Disjunction (Set.toList -> as)) = do
-    assigs <- Reader.asks assignments
-    let newDisjunction = DisjunctInfo $ Map.fromList
-          (map (\(Assignment k v) -> (k, (v, assigs Map.! k))) as)
-    rref <- liftST $ newSTRef newDisjunction
+    assigs         <- Reader.asks assignments
+    newDisjunctRef <- liftST $ do
+      let
+        info =
+          Map.fromList $ map (\(Assignment k v) -> (k, (v, assigs Map.! k))) as
+      UseCount {..}  <- getUseCount info
+      newDisjunctRef <- newSTRef DisjunctInfo { .. }
+      forM_ info $ \(_, v) -> modifySTRef v
+        $ \VarInfo {..} -> VarInfo { uses = newDisjunctRef : uses, .. }
+      return newDisjunctRef
     State.modify $ \CDCLState {..} ->
-      CDCLState { learntClauses = rref : learntClauses, .. }
+      CDCLState { learntClauses = newDisjunctRef : learntClauses, .. }

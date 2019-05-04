@@ -4,6 +4,7 @@ module BoolSat.Solver.CDCL.Monad.Internal
   , CDCLState(..)
   , Conflict(..)
   , DisjunctInfo(..)
+  , DisjunctionMap
   , Environment(..)
   , Level
   , VarInfo(..)
@@ -75,7 +76,13 @@ data VarInfo s = VarInfo
   , uses :: [STRef s (DisjunctInfo s)]
   }
 
-newtype DisjunctInfo s = DisjunctInfo (Map Variable (Sign, STRef s (VarInfo s)))
+type DisjunctionMap s = Map Variable (Sign, STRef s (VarInfo s))
+
+data DisjunctInfo s = DisjunctInfo
+  { info :: DisjunctionMap s
+  , satisfying :: Int
+  , remaining :: Int
+  }
 
 data AssignInfo = AssignInfo
   { value :: Sign
@@ -103,11 +110,18 @@ buildDisjunctionMap fn (Disjunction d) =
     (\(Assignment k v) -> (k, Just (v, fn k)))
     (Set.toList d)
 
+numLits :: Disjunction -> Int
+numLits (Disjunction d) = Set.size d
+
 initialEnv :: Problem -> ST s (Environment s)
 initialEnv prob@(Problem baseClauses) = mfix $ \state -> do
   clauseRefs <- forM baseClauses $ \d -> traverse
     newSTRef
-    (DisjunctInfo <$> buildDisjunctionMap (assignments state Map.!) d)
+    (   DisjunctInfo
+    <$> buildDisjunctionMap (assignments state Map.!) d
+    <*> pure 0
+    <*> pure (numLits d)
+    )
   let useMap =
         Map.unionsWith (<>)
           $   zip baseClauses clauseRefs
