@@ -11,10 +11,6 @@
                 "test"
             ],
             "group": "build",
-            "presentation": {
-                // Reveal the output only if unrecognized errors occur.
-                "reveal": "silent"
-            },
             "problemMatcher": [
                 {
                     "owner": "hie",
