@@ -2,6 +2,7 @@ module BoolSat.Solver.CDCL.Monad.SignMap
     ( SignMap
     , map
     , modify
+    , overwrite
     , signMap
     , (!)
     )
@@ -27,6 +28,9 @@ modify (Sign True ) vop sm@SignMap { posItem } = sm { posItem = vop posItem }
 
 map :: (a -> b) -> SignMap a -> SignMap b
 map = fmap
+
+overwrite :: Sign -> a -> SignMap a -> SignMap a
+overwrite sig = modify sig . const
 
 instance Semigroup a => Semigroup (SignMap a) where
     (<>) (SignMap xl yl) (SignMap xr yr) = SignMap (xl <> xr) (yl <> yr)

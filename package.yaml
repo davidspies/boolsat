@@ -27,6 +27,7 @@ dependencies:
 - deepseq
 - dlist
 - extra
+- lens
 - monad-control
 - mtl
 - random
